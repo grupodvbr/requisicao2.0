@@ -19,26 +19,19 @@ viewport-fit=cover">
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
-/* ================= RESET + ZOOM BLOCK ================= */
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
 html,body{
   margin:0;
   padding:0;
-  overscroll-behavior:none;
   touch-action:manipulation;
 }
-
-/* ================= BASE ================= */
 body{
   font-family:Inter,Arial,sans-serif;
   background:#f4f6f8;
   display:flex;
   justify-content:center;
   padding:14px;
-  color:#0f172a;
 }
-
-/* ================= CONTAINER ================= */
 .container{
   background:#fff;
   border-radius:22px;
@@ -46,24 +39,10 @@ body{
   max-width:520px;
   width:100%;
   padding:22px;
-  position:relative;
 }
 
-/* ================= TITLES ================= */
-h2{
-  text-align:center;
-  font-weight:800;
-  margin:4px 0 18px;
-}
-
-/* ================= FORMS ================= */
-label{
-  font-weight:700;
-  margin-top:14px;
-  display:block;
-  font-size:14px;
-}
-
+/* ===== FORMS ===== */
+label{font-weight:700;margin-top:14px;display:block}
 input,select,textarea{
   width:100%;
   padding:14px;
@@ -71,13 +50,11 @@ input,select,textarea{
   border:1px solid #cbd5e1;
   border-radius:14px;
   font-size:15px;
-  background:#fff;
 }
-
 input[readonly]{background:#f1f5f9}
 textarea{min-height:80px;resize:none}
 
-/* ================= BUTTONS ================= */
+/* ===== BUTTONS ===== */
 button{
   width:100%;
   padding:14px;
@@ -87,51 +64,32 @@ button{
   font-weight:800;
   font-size:15px;
   cursor:pointer;
+  position:relative;
+  overflow:hidden;
 }
-
 .btn-primary{background:#2563eb;color:#fff}
+.btn-muted{background:#e5e7eb;color:#111}
 .btn-dark{background:#0f172a;color:#fff}
-.btn-muted{background:#e5e7eb;color:#0f172a}
 .btn-danger{background:#fee2e2;color:#991b1b}
 
-/* ================= PROFILE ================= */
-.profile{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:14px;
+/* ===== BOTÃO ENVIAR OVERLAY ===== */
+.btn-primary.loading{
+  pointer-events:none;
+  opacity:.85;
 }
-
-.profile-name{
-  background:#f1f5f9;
-  padding:10px 16px;
-  border-radius:999px;
-  font-weight:800;
-  cursor:pointer;
-}
-
-.profile-menu{
-  display:none;
+.btn-primary.loading::after{
+  content:"Enviando...";
   position:absolute;
-  right:22px;
-  top:70px;
-  background:#fff;
-  border-radius:14px;
-  box-shadow:0 12px 30px rgba(0,0,0,.15);
-  overflow:hidden;
-  z-index:20;
-}
-
-.profile-menu button{
-  background:none;
-  border:none;
-  padding:14px 18px;
+  inset:0;
+  background:rgba(0,0,0,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
   font-weight:800;
-  width:100%;
-  text-align:left;
+  font-size:15px;
 }
 
-/* ================= CAMERA ================= */
+/* ===== CAMERA ===== */
 #camera{
   display:none;
   width:100%;
@@ -141,45 +99,23 @@ button{
   margin-top:10px;
   overflow:hidden;
 }
+#camera video{width:100%;height:100%;object-fit:cover}
 
-#camera video{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
-/* ================= BADGE ================= */
-.badge{
-  display:inline-block;
-  background:#e0f2fe;
-  color:#0369a1;
-  padding:8px 16px;
-  border-radius:999px;
-  font-weight:800;
-  margin-top:8px;
-  font-size:13px;
-}
-
-/* ================= TABLE ================= */
+/* ===== TABLE ===== */
 table{
   width:100%;
   border-collapse:collapse;
   margin-top:16px;
   font-size:13px;
 }
-
 th,td{
   border:1px solid #e5e7eb;
   padding:8px;
   text-align:center;
 }
+th{background:#f1f5f9;font-weight:800}
 
-th{
-  background:#f1f5f9;
-  font-weight:800;
-}
-
-/* ================= DELETE ================= */
+/* ===== DELETE ===== */
 .action-delete{
   background:#fee2e2;
   color:#991b1b;
@@ -190,12 +126,10 @@ th{
   cursor:pointer;
   position:relative;
 }
-
 .action-delete.loading{
   pointer-events:none;
   opacity:.6;
 }
-
 .action-delete.loading::after{
   content:"...";
   position:absolute;
@@ -205,26 +139,32 @@ th{
   justify-content:center;
 }
 
-/* ================= UTIL ================= */
+/* ===== UTIL ===== */
 .hidden{display:none}
+.badge{
+  display:inline-block;
+  background:#e0f2fe;
+  color:#0369a1;
+  padding:8px 16px;
+  border-radius:999px;
+  font-weight:800;
+  margin-top:8px;
+  font-size:13px;
+}
 </style>
 </head>
 
 <body>
 <div class="container">
 
-<h2>📋 Requisição de Compras</h2>
-
-<div id="profileArea"></div>
+<h2 style="text-align:center;font-weight:800">📋 Requisição de Compras</h2>
 
 <!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
   <input id="usuario">
-
   <label>Senha</label>
   <input id="senha" type="password">
-
   <button class="btn-dark" id="btnLogin">Entrar</button>
 </div>
 
@@ -262,7 +202,6 @@ th{
 <button class="btn-primary" id="btnEnviar">Enviar requisição</button>
 
 <h3>Histórico (7 dias)</h3>
-
 <table>
 <thead>
 <tr>
@@ -283,19 +222,18 @@ th{
 </div>
 
 <script>
-/* ================= SUPABASE ================= */
+/* ===== SUPABASE ===== */
 const sb = supabase.createClient(
   "https://mybsriouiwqsdufujbsc.supabase.co",
   "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-/* ================= STATE ================= */
 let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
 let page=0, limit=10;
 let unidadeAuto="", barcodeFinal="";
-let lendo=false;
+let enviando=false;
 
-/* ================= LOGIN ================= */
+/* ===== LOGIN ===== */
 btnLogin.onclick = async ()=>{
   const {data} = await sb.from("usuarios")
     .select("*")
@@ -309,35 +247,19 @@ btnLogin.onclick = async ()=>{
   location.reload();
 };
 
-/* ================= PROFILE ================= */
+/* ===== INIT ===== */
 if(usuarioLogado){
   loginArea.classList.add("hidden");
   appArea.classList.remove("hidden");
-  profileArea.innerHTML=`
-    <div class="profile">
-      <div class="profile-name" onclick="toggleMenu()">👤 ${usuarioLogado}</div>
-      <div class="profile-menu" id="menuPerfil">
-        <button onclick="logout()">Sair</button>
-      </div>
-    </div>`;
   carregarHistorico();
 }
 
-function toggleMenu(){
-  const m=document.getElementById("menuPerfil");
-  m.style.display=m.style.display==="block"?"none":"block";
-}
-function logout(){
-  localStorage.removeItem("usuario");
-  location.reload();
-}
-
-/* ================= BARCODE ================= */
+/* ===== BARCODE ===== */
 function normalizar(c){
   return "0"+String(c).replace(/\D/g,"");
 }
 
-/* ================= BUSCAR PRODUTO ================= */
+/* ===== BUSCAR PRODUTO ===== */
 async function buscarProduto(code){
   barcodeFinal=code;
   const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
@@ -351,7 +273,7 @@ async function buscarProduto(code){
   fecharCamera();
 }
 
-/* ================= CAMERA ================= */
+/* ===== CAMERA ===== */
 btnOpenCamera.onclick=()=>{
   camera.style.display="block";
   btnOpenCamera.classList.add("hidden");
@@ -362,11 +284,8 @@ btnOpenCamera.onclick=()=>{
     decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
   },()=>Quagga.start());
 
-  Quagga.onDetected(r=>{
-    buscarProduto(normalizar(r.codeResult.code));
-  });
+  Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
 };
-
 function fecharCamera(){
   Quagga.stop();
   camera.style.display="none";
@@ -375,12 +294,16 @@ function fecharCamera(){
 }
 btnCloseCamera.onclick=fecharCamera;
 
-/* ================= MANUAL ================= */
+/* ===== MANUAL ===== */
 btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ================= ENVIO ================= */
+/* ===== ENVIO COM OVERLAY ===== */
 btnEnviar.onclick=async()=>{
+  if(enviando) return;
   if(!setor.value||!produto.value||!quantidade.value) return alert("Preencha tudo");
+
+  enviando=true;
+  btnEnviar.classList.add("loading");
 
   await sb.from("requisicoes").insert({
     usuario:usuarioLogado,
@@ -393,13 +316,17 @@ btnEnviar.onclick=async()=>{
     status:"PENDENTE"
   });
 
+  btnEnviar.classList.remove("loading");
+  enviando=false;
+
   limparCampos();
+  historico.insertAdjacentHTML("afterbegin",""); 
   page=0;
   historico.innerHTML="";
   carregarHistorico();
 };
 
-/* ================= HISTÓRICO ================= */
+/* ===== HISTÓRICO ===== */
 async function carregarHistorico(){
   const seteDias=new Date(Date.now()-7*86400000).toISOString();
   const {data}=await sb.from("requisicoes")
@@ -418,9 +345,10 @@ async function carregarHistorico(){
         <td>${r.quantidade}</td>
         <td>${r.setor}</td>
         <td>${r.status}</td>
-        <td>${horas<=1
-          ? `<button class="action-delete" onclick="excluir('${r.id}',this)">Excluir</button>`
-          : "-"}
+        <td>
+          ${horas<=1
+            ? `<button class="action-delete" onclick="excluir('${r.id}',this)">Excluir</button>`
+            : "-"}
         </td>
       </tr>
     `);
@@ -431,7 +359,7 @@ async function carregarHistorico(){
 }
 btnMais.onclick=carregarHistorico;
 
-/* ================= EXCLUIR ================= */
+/* ===== EXCLUIR ===== */
 async function excluir(id,btn){
   if(!confirm("Excluir requisição?")) return;
   btn.classList.add("loading");
@@ -445,7 +373,7 @@ async function excluir(id,btn){
   document.getElementById("row-"+id).remove();
 }
 
-/* ================= UTIL ================= */
+/* ===== UTIL ===== */
 function limparCampos(){
   barcode.value="";
   produto.value="";
@@ -454,7 +382,7 @@ function limparCampos(){
   unidadeBox.innerHTML="";
 }
 
-/* ================= PWA ================= */
+/* ===== PWA ===== */
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("/service-worker.js");
 }
