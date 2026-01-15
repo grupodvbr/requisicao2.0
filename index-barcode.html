@@ -161,6 +161,14 @@ th{background:#f1f5f9}
   background:#fee2e2;
   color:#991b1b;
 }
+.item{
+  background:#f1f5f9;
+  padding:12px;
+  border-radius:12px;
+  margin-top:6px;
+  cursor:pointer;
+}
+.item:hover{background:#e2e8f0}
 
 </style>
 </head>
@@ -194,6 +202,23 @@ th{background:#f1f5f9}
 
 <label>Código de Barras</label>
 <input id="barcode" placeholder="Digite ou escaneie">
+<label>Modo de busca</label>
+<select id="modoBusca">
+  <option value="barcode">Código de Barras</option>
+  <option value="nome">Nome do produto</option>
+  <option value="id">ID do produto</option>
+</select>
+
+<div id="buscaNome" class="hidden">
+  <label>Buscar por nome</label>
+  <input id="buscaProdutoNome" placeholder="Digite o nome do produto">
+  <div id="listaProdutos"></div>
+</div>
+
+<div id="buscaId" class="hidden">
+  <label>Buscar por ID</label>
+  <input id="buscaProdutoId" type="number" inputmode="numeric" placeholder="Digite o ID">
+</div>
 
 <button class="btn-muted" id="btnManual">Buscar manual</button>
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
@@ -246,6 +271,17 @@ const normalizar=c=>"0"+String(c).replace(/\D/g,"");
 let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
 let unidadeAuto="",barcodeFinal="";
 let enviando=false;
+const modoBuscaEl = document.getElementById("modoBusca");
+const buscaNomeEl = document.getElementById("buscaNome");
+const buscaIdEl = document.getElementById("buscaId");
+
+modoBuscaEl.onchange = () => {
+  buscaNomeEl.classList.add("hidden");
+  buscaIdEl.classList.add("hidden");
+
+  if (modoBuscaEl.value === "nome") buscaNomeEl.classList.remove("hidden");
+  if (modoBuscaEl.value === "id") buscaIdEl.classList.remove("hidden");
+};
 
 /* ===== SETOR PERSISTENTE ===== */
 const setorEl=document.getElementById("setor");
@@ -365,6 +401,46 @@ async function excluir(id){
  const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
  if(data) document.getElementById("row-"+id)?.remove();
 }
+buscaProdutoNome.onkeyup = async () => {
+  const q = buscaProdutoNome.value.trim();
+  if (q.length < 2) return;
+
+  const r = await fetch(`/api/buscar-nome?q=${encodeURIComponent(q)}`);
+  const j = await r.json();
+
+  listaProdutos.innerHTML = "";
+
+  (j.items || []).forEach(p => {
+    listaProdutos.insertAdjacentHTML(
+      "beforeend",
+      `<div class="item" onclick='selecionarProduto(${JSON.stringify(p)})'>
+        ${p.descricao}
+      </div>`
+    );
+  });
+};
+
+function selecionarProduto(p){
+  produto.value = p.descricao;
+  unidadeAuto = p.unidadeDeVenda;
+  unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
+  listaProdutos.innerHTML = "";
+}
+buscaProdutoId.onchange = async () => {
+  const id = buscaProdutoId.value;
+  if (!id) return;
+
+  const r = await fetch(`/api/produto?id=${id}`);
+  const j = await r.json();
+
+  if (j?.items?.length) {
+    const p = j.items[0];
+    produto.value = p.descricao;
+    unidadeAuto = p.unidadeDeVenda;
+    unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
+  }
+};
+
 </script>
 </body>
 </html>
