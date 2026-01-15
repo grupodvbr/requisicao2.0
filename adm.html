@@ -121,13 +121,11 @@ th,td{
   text-align:center;
 }
 
-/* EDITÁVEL */
 .editavel{
   font-weight:800;
   cursor:pointer;
   user-select:none;
   -webkit-user-select:none;
-  touch-action:manipulation;
 }
 
 select.status{
@@ -237,11 +235,11 @@ select.status{
 <tbody id="lista"></tbody>
 </table>
 
-<!-- MODAL PRODUTO -->
+<!-- MODAL -->
 <div class="modal" id="modalProduto">
   <div class="modal-box">
     <h3>Alterar produto</h3>
-    <input id="novoBarcode" placeholder="Código de barras">
+    <input id="novoBarcode" placeholder="Digite ou escaneie">
     <button class="btn-muted" onclick="abrirCamera()">Buscar com câmera</button>
     <div id="camera"></div>
     <div id="codigoLido"></div>
@@ -284,22 +282,17 @@ function preencherFiltros(){
 /* FILTRAR */
 function filtrar(){
  let lista=[...dados];
-
  if(!fInicio.value&&!fFim.value&&fStatus.value==="PENDENTE"){
    lista=lista.filter(d=>d.status==="PENDENTE");
  }
-
  if(fStatus.value&&fStatus.value!=="PENDENTE")
    lista=lista.filter(d=>d.status===fStatus.value);
-
  if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
  if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
-
  if(fItem.value){
   const t=fItem.value.toLowerCase();
   lista=lista.filter(d=>d.produto.toLowerCase().includes(t)||(d.observacoes||"").toLowerCase().includes(t));
  }
-
  render(lista);
 }
 
@@ -307,7 +300,6 @@ function filtrar(){
 function render(lista){
  listaEl.innerHTML="";
  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
-
  lista.forEach(r=>{
   c[r.status]++;
   listaEl.innerHTML+=`
@@ -326,7 +318,6 @@ function render(lista){
     </td>
   </tr>`;
  });
-
  cP.textContent=c.PENDENTE||0;
  cC.textContent=c["NO CARRINHO"]||0;
  cCO.textContent=c.COMPRADO||0;
@@ -340,7 +331,7 @@ async function mudarStatus(id,status){
  await sb.from("requisicoes").update({status}).eq("id",id);
  const r=dados.find(d=>d.id===id);
  r.status=status;
- render(dados);
+ filtrar();
 }
 
 /* PRODUTO */
@@ -353,6 +344,8 @@ function fecharModal(){
  modalProduto.style.display="none";
  camera.style.display="none";
  if(window.Quagga) Quagga.stop();
+ codigoLido.textContent="";
+ novoBarcode.value="";
 }
 
 function abrirCamera(){
@@ -363,18 +356,26 @@ function abrirCamera(){
  },()=>Quagga.start());
 
  Quagga.onDetected(r=>{
-  novoBarcode.value="0"+r.codeResult.code.replace(/\D/g,"");
-  codigoLido.textContent=novoBarcode.value;
+  const code="0"+r.codeResult.code.replace(/\D/g,"");
+  novoBarcode.value=code;
+  codigoLido.textContent=code;
+  confirmarProduto();
  });
 }
 
 async function confirmarProduto(){
- const {data}=await sb.from("produtos").select("*").eq("barcode",novoBarcode.value).single();
- if(!data) return;
+ if(!novoBarcode.value) return;
+
+ const r=await fetch(`/api/buscar-barcode?barcode=${novoBarcode.value}`);
+ const j=await r.json();
+ if(!j || !j.produto) return;
+
  await sb.from("requisicoes").update({
-  produto:data.descricao,
-  unidade:data.unidade
+  produto:j.produto.descricao,
+  unidade:j.produto.unidadeDeVenda,
+  barcode:novoBarcode.value
  }).eq("id",editandoId);
+
  document.getElementById("beep").play();
  fecharModal();
  carregar();
@@ -390,7 +391,7 @@ function editarQtd(id){
  if(isNaN(n)) return;
  sb.from("requisicoes").update({quantidade:n}).eq("id",id);
  r.quantidade=n;
- render(dados);
+ filtrar();
 }
 
 carregar();
