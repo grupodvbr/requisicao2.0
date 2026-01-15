@@ -4,7 +4,11 @@
 <meta charset="UTF-8">
 <title>Painel de Requisições • Delícia Gourmet</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1.0,
+maximum-scale=1.0,
+user-scalable=no">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -18,6 +22,7 @@
   --success:#16a34a;
   --danger:#dc2626;
   --warn:#f59e0b;
+  --muted:#64748b;
 }
 body.dark{
   --bg:#020617;
@@ -32,6 +37,7 @@ body{
   color:var(--ink);
 }
 
+/* ===== HEADER ===== */
 header{
   display:flex;
   justify-content:space-between;
@@ -41,9 +47,13 @@ header{
   border-bottom:1px solid #e5e7eb;
   position:sticky;
   top:0;
-  z-index:10;
+  z-index:20;
 }
-header h1{margin:0;font-size:18px;font-weight:800}
+header h1{
+  margin:0;
+  font-size:18px;
+  font-weight:800;
+}
 header button{
   border:none;
   background:var(--primary);
@@ -54,6 +64,7 @@ header button{
   cursor:pointer;
 }
 
+/* ===== RESUMO ===== */
 .resumo{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
@@ -66,9 +77,17 @@ header button{
   border-radius:14px;
   display:flex;
   justify-content:space-between;
+  align-items:center;
   font-weight:800;
+  font-size:13px;
+}
+.card span{
+  background:#e5e7eb;
+  padding:4px 10px;
+  border-radius:999px;
 }
 
+/* ===== FILTROS ===== */
 .filtros{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -77,14 +96,17 @@ header button{
   background:var(--card);
   position:sticky;
   top:64px;
-  z-index:9;
+  z-index:15;
 }
-.filtros input,.filtros select{
+.filtros input,
+.filtros select{
   padding:10px;
   border-radius:10px;
   border:1px solid #cbd5e1;
+  font-size:13px;
 }
 
+/* ===== TABELA ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -94,31 +116,48 @@ thead{
   background:var(--primary);
   color:#fff;
   position:sticky;
-  top:140px;
+  top:150px;
+  z-index:10;
 }
 th,td{
   padding:8px;
   border:1px solid #e5e7eb;
   font-size:13px;
   text-align:center;
+  vertical-align:middle;
+}
+td.obs{
+  text-align:left;
+  font-size:12px;
+  color:var(--muted);
 }
 
+/* ===== STATUS ===== */
 select.status{
   padding:6px;
   border-radius:8px;
+  font-weight:700;
 }
 
+/* ===== BOTÕES ===== */
 .btn{
   padding:6px 10px;
   border-radius:8px;
   border:none;
   cursor:pointer;
-  font-weight:700;
+  font-weight:800;
+  font-size:12px;
 }
 .btn-entregue{background:var(--success);color:#fff}
-.btn-editar{background:var(--warn);color:#000}
+.btn-negado{background:var(--danger);color:#fff}
 
-.hidden{display:none}
+/* ===== RESPONSIVO ===== */
+@media(max-width:720px){
+  th:nth-child(7),
+  td:nth-child(7){
+    display:none;
+  }
+}
 </style>
 </head>
 
@@ -129,29 +168,46 @@ select.status{
   <button onclick="toggleTema()">🌙 Tema</button>
 </header>
 
+<!-- RESUMO -->
 <div class="resumo">
   <div class="card">PENDENTE <span id="cP">0</span></div>
+  <div class="card">NO CARRINHO <span id="cC">0</span></div>
+  <div class="card">COMPRADO <span id="cCO">0</span></div>
+  <div class="card">NEGADO <span id="cN">0</span></div>
   <div class="card">ENTREGUE <span id="cE">0</span></div>
+  <div class="card">SEM ESTOQUE <span id="cSE">0</span></div>
 </div>
 
+<!-- FILTROS -->
 <div class="filtros">
   <input type="date" id="fInicio">
   <input type="date" id="fFim">
-  <input type="text" id="fItem" placeholder="Item / Obs">
+  <input type="text" id="fItem" placeholder="Item / Observação">
   <select id="fStatus">
-    <option value="PENDENTE">PENDENTE</option>
+    <option value="PENDENTE" selected>PENDENTE</option>
     <option value="">TODOS</option>
-    <option value="ENTREGUE">ENTREGUE</option>
+    <option>NO CARRINHO</option>
+    <option>COMPRADO</option>
+    <option>NEGADO</option>
+    <option>ENTREGUE</option>
+    <option>SEM ESTOQUE</option>
   </select>
   <select id="fSetor"></select>
   <select id="fUsuario"></select>
 </div>
 
+<!-- TABELA -->
 <table>
 <thead>
 <tr>
-<th>Data</th><th>Produto</th><th>Qtd</th><th>Un</th>
-<th>Setor</th><th>Solicitante</th><th>Obs</th><th>Ações</th>
+  <th>Data</th>
+  <th>Produto</th>
+  <th>Qtd</th>
+  <th>Un</th>
+  <th>Setor</th>
+  <th>Solicitante</th>
+  <th>Obs</th>
+  <th>Status</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
@@ -163,14 +219,13 @@ const sb = supabase.createClient(
   "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-const listaEl = document.getElementById("lista");
-
 let dados=[];
 
 function toggleTema(){
   document.body.classList.toggle("dark");
 }
 
+/* ===== CARREGAR ===== */
 async function carregar(){
   const {data} = await sb
     .from("requisicoes")
@@ -182,37 +237,50 @@ async function carregar(){
   filtrar();
 }
 
+/* ===== FILTROS ===== */
 function preencherFiltros(){
   fSetor.innerHTML='<option value="">Todos Setores</option>';
-  [...new Set(dados.map(d=>d.setor))].forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
+  [...new Set(dados.map(d=>d.setor))].forEach(s=>{
+    if(s) fSetor.innerHTML+=`<option>${s}</option>`;
+  });
 
   fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
-  [...new Set(dados.map(d=>d.usuario))].forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
+  [...new Set(dados.map(d=>d.usuario))].forEach(u=>{
+    if(u) fUsuario.innerHTML+=`<option>${u}</option>`;
+  });
 }
 
-[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
+[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>{
+  el.oninput=filtrar;
+});
 
+/* ===== FILTRAR ===== */
 function filtrar(){
   let lista=[...dados];
 
   if(fStatus.value) lista=lista.filter(d=>d.status===fStatus.value);
   if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
   if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
+
   if(fItem.value){
     const t=fItem.value.toLowerCase();
-    lista=lista.filter(d=>d.produto.toLowerCase().includes(t)||(d.observacoes||"").toLowerCase().includes(t));
+    lista=lista.filter(d=>
+      d.produto.toLowerCase().includes(t) ||
+      (d.observacoes||"").toLowerCase().includes(t)
+    );
   }
 
   render(lista);
 }
 
+/* ===== RENDER ===== */
 function render(lista){
-  listaEl.innerHTML="";
-  let cP=0,cE=0;
+  lista.innerHTML="";
+  let c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
 
+  listaEl.innerHTML="";
   lista.forEach(r=>{
-    if(r.status==="PENDENTE") cP++;
-    if(r.status==="ENTREGUE") cE++;
+    c[r.status]=(c[r.status]||0)+1;
 
     listaEl.innerHTML+=`
     <tr>
@@ -222,21 +290,29 @@ function render(lista){
       <td>${r.unidade}</td>
       <td>${r.setor}</td>
       <td>${r.usuario}</td>
-      <td>${r.observacoes||""}</td>
+      <td class="obs">${r.observacoes||""}</td>
       <td>
-        <button class="btn btn-entregue" onclick="entregar('${r.id}')">ENTREGUE</button>
+        <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
+          ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
+            .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+        </select>
       </td>
     </tr>`;
   });
 
-  document.getElementById("cP").textContent=cP;
-  document.getElementById("cE").textContent=cE;
+  cP.textContent=c.PENDENTE||0;
+  cC.textContent=c["NO CARRINHO"]||0;
+  cCO.textContent=c.COMPRADO||0;
+  cN.textContent=c.NEGADO||0;
+  cE.textContent=c.ENTREGUE||0;
+  cSE.textContent=c["SEM ESTOQUE"]||0;
 }
 
-async function entregar(id){
-  await sb.from("requisicoes").update({status:"ENTREGUE"}).eq("id",id);
+/* ===== STATUS ===== */
+async function atualizarStatus(id,status){
+  await sb.from("requisicoes").update({status}).eq("id",id);
   const r=dados.find(d=>d.id===id);
-  if(r) r.status="ENTREGUE";
+  if(r) r.status=status;
   filtrar();
 }
 
