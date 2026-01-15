@@ -2,103 +2,93 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="viewport"
+content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Requisições • Mercatto</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
 :root{
-  --azul:#007bff;
-  --verde:#28a745;
-  --vermelho:#dc3545;
-  --amarelo:#ffc107;
-  --roxo:#6f42c1;
-  --cinza:#f1f1f1;
+  --azul:#2563eb;
+  --pendente:#f3f4f6;
+  --carrinho:#dbeafe;
+  --comprado:#fef3c7;
+  --negado:#fee2e2;
+  --entregue:#dcfce7;
+  --semestoque:#ede9fe;
   --bg:#ffffff;
-  --ink:#222;
-}
-body.dark{
-  --bg:#121212;
-  --cinza:#1e1e1e;
-  --ink:#eee;
+  --ink:#0f172a;
+  --muted:#64748b;
 }
 *{box-sizing:border-box}
 body{
   margin:0;
-  font-family:Arial, sans-serif;
-  background:var(--cinza);
+  font-family:Inter,Arial;
+  background:#f1f5f9;
   color:var(--ink);
 }
 
 /* ===== HEADER ===== */
 header{
-  position:sticky;
-  top:0;
-  z-index:30;
-  background:var(--bg);
-  border-bottom:2px solid var(--cinza);
-  padding:10px;
+  position:sticky;top:0;z-index:30;
+  background:#fff;
+  padding:10px 14px;
   display:flex;
   justify-content:space-between;
   align-items:center;
+  border-bottom:1px solid #e5e7eb;
 }
-header h1{
-  margin:0;
-  font-size:1.2em;
-}
+header h1{margin:0;font-size:1.1em;font-weight:800}
 header button{
-  border:none;
-  background:none;
-  font-size:18px;
-  cursor:pointer;
+  border:none;background:none;font-size:18px;cursor:pointer;
 }
 
 /* ===== RESUMO ===== */
 .resumo{
-  display:flex;
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   gap:8px;
   padding:10px;
-  background:var(--bg);
 }
 .card{
-  padding:8px 12px;
-  border-radius:8px;
-  font-weight:bold;
+  padding:10px;
+  border-radius:12px;
   font-size:13px;
+  font-weight:800;
   display:flex;
+  justify-content:space-between;
   align-items:center;
-  gap:6px;
+  cursor:pointer;
 }
 .card span{
-  background:rgba(255,255,255,.75);
-  padding:2px 8px;
-  border-radius:6px;
+  background:#fff;
+  padding:4px 10px;
+  border-radius:999px;
 }
-.card.pendente{background:#f9f9f9}
-.card.carrinho{background:#d1ecf1}
-.card.comprado{background:#fff3cd}
-.card.negado{background:#f8d7da}
-.card.entregue{background:#d4edda}
-.card.semestoque{background:#ede7f6}
+.card.pendente{background:var(--pendente)}
+.card.carrinho{background:var(--carrinho)}
+.card.comprado{background:var(--comprado)}
+.card.negado{background:var(--negado)}
+.card.entregue{background:var(--entregue)}
+.card.semestoque{background:var(--semestoque)}
 
 /* ===== FILTROS ===== */
 .filtros{
-  position:sticky;
-  top:64px;
-  z-index:20;
-  background:var(--bg);
-  padding:10px;
-  display:flex;
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   gap:8px;
+  padding:10px;
+  background:#fff;
+  position:sticky;
+  top:52px;
+  z-index:20;
 }
-.filtros input,
-.filtros select{
-  padding:6px;
-  border-radius:6px;
-  border:1px solid #ccc;
+.filtros input,.filtros select{
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #cbd5e1;
   font-size:13px;
 }
 
@@ -106,64 +96,86 @@ header button{
 table{
   width:100%;
   border-collapse:collapse;
-  background:var(--bg);
+  background:#fff;
   font-size:13px;
 }
 thead{
   background:var(--azul);
   color:#fff;
   position:sticky;
-  top:128px;
-  z-index:10;
+  top:140px;
 }
 th,td{
   padding:8px;
-  border:1px solid #ddd;
+  border:1px solid #e5e7eb;
   text-align:center;
-  vertical-align:middle;
 }
-td[colspan]{
-  background:#e3eaf3;
-  font-weight:bold;
-  text-align:left;
+td.produto,td.qtd{
+  user-select:none;
+  cursor:pointer;
 }
+td.obs{font-size:12px;color:var(--muted)}
 select.status{
-  padding:4px;
-  border-radius:5px;
+  padding:4px;border-radius:6px;
 }
 
-/* ===== RESPONSIVO ===== */
-@media(max-width:900px){
-  th:nth-child(7),
-  td:nth-child(7){
-    display:none;
-  }
+/* ===== POPUPS ===== */
+.overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.4);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
 }
+.popup{
+  background:#fff;
+  width:92%;
+  max-width:520px;
+  border-radius:16px;
+  padding:16px;
+  max-height:80vh;
+  overflow:auto;
+}
+.popup h3{margin-top:0}
+.popup button{
+  width:100%;
+  margin-top:10px;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  font-weight:800;
+}
+.btn-primary{background:var(--azul);color:#fff}
+.btn-danger{background:#dc2626;color:#fff}
+#camera{width:100%;height:260px;background:#000;border-radius:12px;overflow:hidden;margin-top:10px}
+#camera video{width:100%;height:100%;object-fit:cover}
 </style>
 </head>
 
 <body>
 
 <header>
-  <h1>📋 Requisições Mercatto</h1>
-  <button onclick="toggleTema()" id="temaBtn">🌙</button>
+  <h1>📋 Requisições</h1>
+  <button onclick="toggleTema()">🌙</button>
 </header>
 
-<!-- ===== RESUMO ===== -->
+<!-- RESUMO -->
 <div class="resumo">
-  <div class="card pendente">🕓 PENDENTE <span id="cP">0</span></div>
-  <div class="card carrinho">🛒 NO CARRINHO <span id="cC">0</span></div>
-  <div class="card comprado">💰 COMPRADO <span id="cCO">0</span></div>
-  <div class="card negado">❌ NEGADO <span id="cN">0</span></div>
-  <div class="card entregue">✅ ENTREGUE <span id="cE">0</span></div>
-  <div class="card semestoque">🚫 SEM ESTOQUE <span id="cSE">0</span></div>
+  <div class="card pendente" onclick="abrirPopupStatus('PENDENTE')">PENDENTE <span id="cP">0</span></div>
+  <div class="card carrinho" onclick="abrirPopupStatus('NO CARRINHO')">CARRINHO <span id="cC">0</span></div>
+  <div class="card comprado" onclick="abrirPopupStatus('COMPRADO')">COMPRADO <span id="cCO">0</span></div>
+  <div class="card negado" onclick="abrirPopupStatus('NEGADO')">NEGADO <span id="cN">0</span></div>
+  <div class="card entregue" onclick="abrirPopupStatus('ENTREGUE')">ENTREGUE <span id="cE">0</span></div>
+  <div class="card semestoque" onclick="abrirPopupStatus('SEM ESTOQUE')">SEM ESTOQUE <span id="cSE">0</span></div>
 </div>
 
-<!-- ===== FILTROS ===== -->
+<!-- FILTROS -->
 <div class="filtros">
   <input type="date" id="dataInicio">
   <input type="date" id="dataFim">
-  <input type="text" id="fItem" placeholder="Item ou Observação">
+  <input type="text" id="fItem" placeholder="Item / Obs">
   <select id="fStatus">
     <option value="PENDENTE" selected>PENDENTE</option>
     <option value="TODOS">TODOS</option>
@@ -175,166 +187,202 @@ select.status{
   </select>
   <select id="fSetor"></select>
   <select id="fUsuario"></select>
-  <select id="fModo">
-    <option value="setor">Agrupar por Setor</option>
-    <option value="usuario">Agrupar por Solicitante</option>
-  </select>
 </div>
 
-<!-- ===== TABELA ===== -->
 <table>
 <thead>
 <tr>
-  <th>Data/Hora</th>
-  <th>Produto</th>
-  <th>Qtd</th>
-  <th>Un</th>
-  <th>Setor</th>
-  <th>Solicitante</th>
-  <th>Obs</th>
-  <th>Status</th>
+  <th>Data</th><th>Produto</th><th>Qtd</th><th>Un</th>
+  <th>Setor</th><th>Solicitante</th><th>Obs</th><th>Status</th>
 </tr>
 </thead>
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- POPUP STATUS -->
+<div class="overlay" id="popupStatus">
+  <div class="popup">
+    <h3 id="tituloStatus"></h3>
+    <table style="width:100%">
+      <tbody id="listaStatus"></tbody>
+    </table>
+    <button class="btn-danger" onclick="fecharPopupStatus()">Fechar</button>
+  </div>
+</div>
+
+<!-- POPUP PRODUTO -->
+<div class="overlay" id="popupProduto">
+  <div class="popup">
+    <h3>Alterar produto</h3>
+    <input id="novoCodigo" placeholder="Código de barras">
+    <button class="btn-primary" onclick="buscarProdutoManual()">Buscar</button>
+    <button class="btn-primary" onclick="abrirCamera()">Abrir câmera</button>
+    <div id="camera"></div>
+    <button class="btn-danger" onclick="fecharPopupProduto()">Cancelar</button>
+  </div>
+</div>
+
 <script>
-/* ===== SUPABASE ===== */
-const sb = supabase.createClient(
-  "https://mybsriouiwqsdufujbsc.supabase.co",
-  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
+const sb=supabase.createClient(
+ "https://mybsriouiwqsdufujbsc.supabase.co",
+ "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-let dados=[];
+let dados=[],registroAtual=null;
 
-/* ===== TEMA ===== */
-function toggleTema(){
-  document.body.classList.toggle("dark");
-  localStorage.setItem("tema",document.body.classList.contains("dark")?"dark":"light");
-  temaBtn.textContent=document.body.classList.contains("dark")?"☀️":"🌙";
-}
-if(localStorage.getItem("tema")==="dark"){
-  document.body.classList.add("dark");
-  temaBtn.textContent="☀️";
-}
-
-/* ===== LOAD ===== */
+/* LOAD */
 async function carregar(){
-  const {data,error}=await sb
-    .from("requisicoes")
-    .select("*")
-    .order("created_at",{ascending:false});
-
-  if(error){
-    alert("Erro Supabase: "+error.message);
-    return;
-  }
-
-  dados=data||[];
-  preencherFiltros();
-  filtrar();
+ const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
+ dados=data||[];
+ preencherFiltros();
+ filtrar();
+ calcularResumo();
 }
-
-/* ===== FILTROS ===== */
-function preencherFiltros(){
-  fSetor.innerHTML='<option value="">Todos Setores</option>';
-  [...new Set(dados.map(d=>d.setor).filter(Boolean))]
-    .forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
-
-  fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
-  [...new Set(dados.map(d=>d.usuario).filter(Boolean))]
-    .forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
-}
-
-[dataInicio,dataFim,fItem,fStatus,fSetor,fUsuario,fModo].forEach(e=>e.oninput=filtrar);
-
-/* ===== FILTRAR ===== */
-function filtrar(){
-  let lista=[...dados];
-
-  const fs=fStatus.value;
-  if(fs!=="TODOS"){
-    lista=lista.filter(r=>{
-      const s=(r.status||"PENDENTE").toUpperCase();
-      const pendente=!["NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"].includes(s);
-      return fs==="PENDENTE"?pendente:s===fs;
-    });
-  }
-
-  if(fSetor.value) lista=lista.filter(r=>r.setor===fSetor.value);
-  if(fUsuario.value) lista=lista.filter(r=>r.usuario===fUsuario.value);
-
-  if(fItem.value){
-    const t=fItem.value.toLowerCase();
-    lista=lista.filter(r=>
-      r.produto.toLowerCase().includes(t) ||
-      (r.observacoes||"").toLowerCase().includes(t)
-    );
-  }
-
-  render(lista);
-}
-
-/* ===== RENDER ===== */
-function render(lista){
-  tabela.innerHTML="";
-  const cont={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
-
-  const grupos={};
-  lista.forEach(r=>{
-    const chave=fModo.value==="setor"?r.setor:r.usuario;
-    if(!grupos[chave]) grupos[chave]=[];
-    grupos[chave].push(r);
-    cont[(r.status||"PENDENTE").toUpperCase()]++;
-  });
-
-  for(const g in grupos){
-    tabela.insertAdjacentHTML("beforeend",
-      `<tr><td colspan="8">${fModo.value==="setor"?"Setor":"Solicitante"}: ${g}</td></tr>`
-    );
-
-    grupos[g].forEach(r=>{
-      tabela.insertAdjacentHTML("beforeend",`
-        <tr>
-          <td>${new Date(r.created_at).toLocaleString()}</td>
-          <td>${r.produto}</td>
-          <td>${r.quantidade}</td>
-          <td>${r.unidade}</td>
-          <td>${r.setor}</td>
-          <td>${r.usuario}</td>
-          <td>${r.observacoes||""}</td>
-          <td>
-            <select class="status" onchange="mudarStatus('${r.id}',this.value)">
-              ${Object.keys(cont).map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
-            </select>
-          </td>
-        </tr>
-      `);
-    });
-  }
-
-  cP.textContent=cont.PENDENTE||0;
-  cC.textContent=cont["NO CARRINHO"]||0;
-  cCO.textContent=cont.COMPRADO||0;
-  cN.textContent=cont.NEGADO||0;
-  cE.textContent=cont.ENTREGUE||0;
-  cSE.textContent=cont["SEM ESTOQUE"]||0;
-}
-
-/* ===== STATUS (SUPABASE REAL) ===== */
-async function mudarStatus(id,status){
-  const {error}=await sb.from("requisicoes").update({status}).eq("id",id);
-  if(error){
-    alert("Erro ao atualizar status: "+error.message);
-    return;
-  }
-  const r=dados.find(d=>d.id===id);
-  if(r) r.status=status;
-  filtrar();
-}
-
-/* INIT */
 carregar();
+
+/* FILTROS */
+function preencherFiltros(){
+ fSetor.innerHTML='<option value="">Todos Setores</option>';
+ [...new Set(dados.map(d=>d.setor).filter(Boolean))].forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
+ fUsuario.innerHTML='<option value="">Todos</option>';
+ [...new Set(dados.map(d=>d.usuario).filter(Boolean))].forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
+}
+[dataInicio,dataFim,fItem,fStatus,fSetor,fUsuario].forEach(e=>e.oninput=()=>{filtrar();calcularResumo();});
+
+/* FILTRAR */
+function filtrar(){
+ let lista=[...dados];
+ if(fStatus.value!=="TODOS"){
+  lista=lista.filter(r=>{
+   const s=(r.status||"PENDENTE");
+   return fStatus.value==="PENDENTE"
+    ? !["NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"].includes(s)
+    : s===fStatus.value;
+  });
+ }
+ if(fSetor.value) lista=lista.filter(r=>r.setor===fSetor.value);
+ if(fUsuario.value) lista=lista.filter(r=>r.usuario===fUsuario.value);
+ if(fItem.value){
+  const t=fItem.value.toLowerCase();
+  lista=lista.filter(r=>r.produto.toLowerCase().includes(t)||(r.observacoes||"").toLowerCase().includes(t));
+ }
+ render(lista);
+}
+
+/* RENDER */
+function render(lista){
+ tabela.innerHTML="";
+ lista.forEach(r=>{
+  tabela.insertAdjacentHTML("beforeend",`
+  <tr>
+   <td>${new Date(r.created_at).toLocaleString()}</td>
+   <td class="produto" ondblclick="abrirPopupProduto('${r.id}')">${r.produto}</td>
+   <td class="qtd" ondblclick="editarQuantidade('${r.id}')">${r.quantidade}</td>
+   <td>${r.unidade}</td>
+   <td>${r.setor}</td>
+   <td>${r.usuario}</td>
+   <td class="obs">${r.observacoes||""}</td>
+   <td>
+    <select class="status" onchange="mudarStatus('${r.id}',this.value)">
+     ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
+       .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+    </select>
+   </td>
+  </tr>
+  `);
+ });
+}
+
+/* STATUS */
+async function mudarStatus(id,status){
+ await sb.from("requisicoes").update({status}).eq("id",id);
+ const r=dados.find(d=>d.id===id); if(r) r.status=status;
+ calcularResumo();
+}
+
+/* RESUMO */
+function calcularResumo(){
+ let ini=dataInicio.value?new Date(dataInicio.value):new Date(Date.now()-30*86400000);
+ let fim=dataFim.value?new Date(dataFim.value+"T23:59:59"):new Date();
+ const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
+ dados.forEach(r=>{
+  const d=new Date(r.created_at);
+  if(d<ini||d>fim) return;
+  const s=(r.status||"PENDENTE");
+  if(c[s]!=null)c[s]++; else c.PENDENTE++;
+ });
+ cP.textContent=c.PENDENTE;cC.textContent=c["NO CARRINHO"];
+ cCO.textContent=c.COMPRADO;cN.textContent=c.NEGADO;
+ cE.textContent=c.ENTREGUE;cSE.textContent=c["SEM ESTOQUE"];
+}
+
+/* POPUP STATUS */
+function abrirPopupStatus(st){
+ tituloStatus.textContent=st;
+ listaStatus.innerHTML="";
+ let ini=dataInicio.value?new Date(dataInicio.value):new Date(Date.now()-30*86400000);
+ let fim=dataFim.value?new Date(dataFim.value+"T23:59:59"):new Date();
+ dados.filter(r=>{
+  const d=new Date(r.created_at);
+  return d>=ini&&d<=fim&&(r.status||"PENDENTE")===st;
+ }).forEach(r=>{
+  listaStatus.insertAdjacentHTML("beforeend",`
+   <tr><td>${r.produto}</td><td>${r.quantidade}</td><td>${r.setor}</td></tr>
+  `);
+ });
+ popupStatus.style.display="flex";
+}
+function fecharPopupStatus(){popupStatus.style.display="none";}
+
+/* PRODUTO */
+function abrirPopupProduto(id){
+ registroAtual=dados.find(r=>r.id===id);
+ popupProduto.style.display="flex";
+}
+function fecharPopupProduto(){
+ popupProduto.style.display="none";
+ Quagga.stop();
+}
+async function buscarProdutoManual(){
+ buscarProduto(novoCodigo.value);
+}
+async function buscarProduto(code){
+ const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+ const j=await r.json();
+ if(j?.produto){
+  await sb.from("requisicoes").update({
+   produto:j.produto.descricao,
+   unidade:j.produto.unidadeDeVenda,
+   barcode:code
+  }).eq("id",registroAtual.id);
+  registroAtual.produto=j.produto.descricao;
+  registroAtual.unidade=j.produto.unidadeDeVenda;
+  fecharPopupProduto();
+  filtrar();
+ }
+}
+
+/* CAMERA */
+function abrirCamera(){
+ Quagga.init({
+  inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
+  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+ },()=>Quagga.start());
+ Quagga.onDetected(r=>buscarProduto(r.codeResult.code));
+}
+
+/* QTD */
+function editarQuantidade(id){
+ const r=dados.find(x=>x.id===id);
+ const decimal=["KG","G","L","ML"].includes(r.unidade);
+ const v=prompt("Nova quantidade",r.quantidade);
+ if(v==null) return;
+ const q=decimal?parseFloat(v):parseInt(v);
+ if(isNaN(q)) return;
+ sb.from("requisicoes").update({quantidade:q}).eq("id",id);
+ r.quantidade=q;
+ filtrar();
+}
 </script>
 
 </body>
