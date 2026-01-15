@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Painel de Requisições • Delícia Gourmet</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --bg:#f4f6f8;
+  --card:#fff;
+  --ink:#111;
+  --primary:#2563eb;
+  --success:#16a34a;
+  --danger:#dc2626;
+  --warn:#f59e0b;
+}
+body.dark{
+  --bg:#0f172a;
+  --card:#020617;
+  --ink:#e5e7eb;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,Arial;
+  background:var(--bg);
+  color:var(--ink);
+}
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:14px 20px;
+  background:var(--card);
+  border-bottom:1px solid #e5e7eb;
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+header h1{
+  font-size:18px;
+  margin:0;
+  font-weight:800;
+}
+header button{
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  padding:8px 14px;
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+
+/* ===== RESUMO ===== */
+.resumo{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:10px;
+  padding:14px;
+}
+.card{
+  background:var(--card);
+  padding:12px;
+  border-radius:14px;
+  font-weight:800;
+  display:flex;
+  justify-content:space-between;
+}
+
+/* ===== FILTROS ===== */
+.filtros{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:10px;
+  padding:14px;
+  background:var(--card);
+  position:sticky;
+  top:64px;
+  z-index:10;
+}
+.filtros input,.filtros select{
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #cbd5e1;
+  font-size:13px;
+}
+
+/* ===== TABELA ===== */
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:var(--card);
+}
+thead{
+  background:var(--primary);
+  color:#fff;
+  position:sticky;
+  top:140px;
+}
+th,td{
+  padding:8px;
+  border:1px solid #e5e7eb;
+  text-align:center;
+  font-size:13px;
+}
+select.status{
+  padding:6px;
+  border-radius:8px;
+}
+
+/* ===== BOTÕES ===== */
+.btn-entregue{
+  background:var(--success);
+  color:#fff;
+  border:none;
+  padding:6px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:700;
+}
+.btn-massa{
+  margin:14px;
+  background:var(--success);
+  color:#fff;
+  border:none;
+  padding:12px;
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+/* ===== UTIL ===== */
+.hidden{display:none}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>📋 Painel de Requisições</h1>
+  <button onclick="toggleTema()">🌙 Tema</button>
+</header>
+
+<div class="resumo">
+  <div class="card">🕓 PENDENTE <span id="cP">0</span></div>
+  <div class="card">🛒 CARRINHO <span id="cC">0</span></div>
+  <div class="card">💰 COMPRADO <span id="cCo">0</span></div>
+  <div class="card">❌ NEGADO <span id="cN">0</span></div>
+  <div class="card">✅ ENTREGUE <span id="cE">0</span></div>
+</div>
+
+<div class="filtros">
+  <input type="date" id="fInicio">
+  <input type="date" id="fFim">
+  <input type="text" id="fItem" placeholder="Item / Obs">
+  <select id="fStatus">
+    <option value="">Todos</option>
+    <option>PENDENTE</option>
+    <option>NO CARRINHO</option>
+    <option>COMPRADO</option>
+    <option>NEGADO</option>
+    <option>ENTREGUE</option>
+  </select>
+  <select id="fSetor"></select>
+  <select id="fUsuario"></select>
+</div>
+
+<button class="btn-massa" onclick="marcarEntregueMassa()">📦 Marcar todos como ENTREGUE</button>
+
+<table>
+<thead>
+<tr>
+<th>Data</th><th>Produto</th><th>Qtd</th><th>Un</th>
+<th>Setor</th><th>Solicitante</th><th>Obs</th><th>Status</th>
+</tr>
+</thead>
+<tbody id="lista"></tbody>
+</table>
+
+<script>
+/* ===== SUPABASE ===== */
+const sb = supabase.createClient(
+  "https://mybsriouiwqsdufujbsc.supabase.co",
+  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
+);
+
+let dados=[];
+
+/* ===== TEMA ===== */
+function toggleTema(){
+  document.body.classList.toggle("dark");
+}
+
+/* ===== LOAD ===== */
+async function carregar(){
+  const {data} = await sb
+    .from("requisicoes")
+    .select("*")
+    .order("created_at",{ascending:false});
+
+  dados=data||[];
+  preencherFiltros();
+  filtrar();
+}
+
+/* ===== FILTROS ===== */
+function preencherFiltros(){
+  fSetor.innerHTML='<option value="">Todos Setores</option>';
+  [...new Set(dados.map(d=>d.setor))].forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
+
+  fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
+  [...new Set(dados.map(d=>d.usuario))].forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
+}
+
+[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
+
+/* ===== FILTRAR ===== */
+function filtrar(){
+  let listaFiltrada=[...dados];
+  if(fStatus.value) listaFiltrada=listaFiltrada.filter(d=>d.status===fStatus.value);
+  if(fSetor.value) listaFiltrada=listaFiltrada.filter(d=>d.setor===fSetor.value);
+  if(fUsuario.value) listaFiltrada=listaFiltrada.filter(d=>d.usuario===fUsuario.value);
+  if(fItem.value) listaFiltrada=listaFiltrada.filter(d=>
+    d.produto.toLowerCase().includes(fItem.value.toLowerCase()) ||
+    (d.observacoes||"").toLowerCase().includes(fItem.value.toLowerCase())
+  );
+  render(listaFiltrada);
+}
+
+/* ===== RENDER ===== */
+function render(lista){
+  listaEl.innerHTML="";
+  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0};
+
+  lista.forEach(r=>{
+    c[r.status]=(c[r.status]||0)+1;
+    listaEl.innerHTML+=`
+    <tr>
+      <td>${new Date(r.created_at).toLocaleString()}</td>
+      <td>${r.produto}</td>
+      <td>${r.quantidade}</td>
+      <td>${r.unidade}</td>
+      <td>${r.setor}</td>
+      <td>${r.usuario}</td>
+      <td>${r.observacoes||""}</td>
+      <td>
+        <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
+          ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE"].map(s=>
+            `<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+      </td>
+    </tr>`;
+  });
+
+  cP.textContent=c.PENDENTE||0;
+  cC.textContent=c["NO CARRINHO"]||0;
+  cCo.textContent=c.COMPRADO||0;
+  cN.textContent=c.NEGADO||0;
+  cE.textContent=c.ENTREGUE||0;
+}
+
+/* ===== STATUS ===== */
+async function atualizarStatus(id,status){
+  await sb.from("requisicoes").update({status}).eq("id",id);
+  const r=dados.find(d=>d.id===id);
+  if(r) r.status=status;
+}
+
+/* ===== MASSA ===== */
+async function marcarEntregueMassa(){
+  if(!confirm("Marcar todos filtrados como ENTREGUE?"))return;
+  for(const r of dados.filter(d=>d.status!=="ENTREGUE")){
+    await sb.from("requisicoes").update({status:"ENTREGUE"}).eq("id",r.id);
+    r.status="ENTREGUE";
+  }
+  filtrar();
+}
+
+carregar();
+</script>
+</body>
+</html>
