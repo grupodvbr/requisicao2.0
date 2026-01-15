@@ -31,17 +31,9 @@ body{
   padding:22px;
   position:relative;
 }
-h2{
-  text-align:center;
-  font-weight:800;
-  margin:6px 0 18px;
-}
+h2{text-align:center;font-weight:800;margin:6px 0 18px}
 
-label{
-  font-weight:700;
-  margin-top:14px;
-  display:block;
-}
+label{font-weight:700;margin-top:14px;display:block}
 input,select,textarea{
   width:100%;
   padding:14px;
@@ -65,22 +57,7 @@ button{
 }
 .btn-primary{background:#2563eb;color:#fff}
 .btn-dark{background:#0f172a;color:#fff}
-.btn-danger{background:#dc2626;color:#fff}
 .btn-muted{background:#e5e7eb;color:#111}
-
-#camera{
-  width:100%;
-  height:260px;
-  background:#000;
-  border-radius:18px;
-  margin-top:10px;
-  overflow:hidden;
-}
-#camera video{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
 
 .badge{
   display:inline-block;
@@ -93,7 +70,17 @@ button{
   font-size:13px;
 }
 
-/* ===== PERFIL ===== */
+#camera{
+  display:none;
+  width:100%;
+  height:260px;
+  background:#000;
+  border-radius:18px;
+  margin-top:10px;
+  overflow:hidden;
+}
+#camera video{width:100%;height:100%;object-fit:cover}
+
 .profile{
   display:flex;
   justify-content:space-between;
@@ -116,7 +103,6 @@ button{
   border-radius:14px;
   box-shadow:0 12px 30px rgba(0,0,0,.15);
   overflow:hidden;
-  z-index:10;
 }
 .profile-menu button{
   background:none;
@@ -126,32 +112,6 @@ button{
   cursor:pointer;
   width:100%;
   text-align:left;
-}
-.profile-menu button:hover{
-  background:#f1f5f9;
-}
-
-.overlay{
-  position:absolute;
-  inset:0;
-  background:rgba(255,255,255,.85);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  font-weight:800;
-  font-size:18px;
-  z-index:50;
-}
-
-.alert{
-  background:#dcfce7;
-  color:#166534;
-  padding:14px;
-  border-radius:16px;
-  text-align:center;
-  font-weight:800;
-  margin-top:14px;
-  display:none;
 }
 
 table{
@@ -165,10 +125,7 @@ th,td{
   padding:8px;
   text-align:center;
 }
-th{
-  background:#f1f5f9;
-  font-weight:800;
-}
+th{background:#f1f5f9}
 
 .action-delete{
   background:#fee2e2;
@@ -178,6 +135,19 @@ th{
   padding:6px 12px;
   font-weight:800;
   cursor:pointer;
+  position:relative;
+}
+.action-delete.loading{
+  pointer-events:none;
+  opacity:.6;
+}
+.action-delete.loading::after{
+  content:"...";
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 </style>
 </head>
@@ -185,14 +155,10 @@ th{
 <body>
 <div class="container">
 
-<div class="overlay" id="overlay">Enviando…</div>
-
 <h2>📋 Requisição de Compras</h2>
 
-<!-- PERFIL -->
 <div id="profileArea"></div>
 
-<!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
   <input id="usuario">
@@ -201,7 +167,6 @@ th{
   <button class="btn-dark" id="btnLogin">Entrar</button>
 </div>
 
-<!-- APP -->
 <div id="appArea" style="display:none">
 
 <label>Setor</label>
@@ -216,13 +181,13 @@ th{
 <input id="barcode">
 
 <button class="btn-muted" id="btnManual">Buscar manual</button>
-<button class="btn-primary" id="btnCamera">Ler com câmera</button>
+<button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
+<button class="btn-muted" id="btnCloseCamera" style="display:none">Fechar câmera</button>
 
 <div id="camera"></div>
 
 <label>Produto</label>
 <input id="produto" readonly>
-
 <div id="unidadeBox"></div>
 
 <label>Quantidade</label>
@@ -233,10 +198,7 @@ th{
 
 <button class="btn-primary" id="btnEnviar">Enviar requisição</button>
 
-<div class="alert" id="alerta">Requisição enviada com sucesso</div>
-
 <h3>Histórico (7 dias)</h3>
-
 <table>
 <thead>
 <tr>
@@ -257,7 +219,6 @@ th{
 </div>
 
 <script>
-/* ================= SUPABASE ================= */
 const sb = supabase.createClient(
   "https://mybsriouiwqsdufujbsc.supabase.co",
   "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
@@ -266,9 +227,7 @@ const sb = supabase.createClient(
 let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
 let page=0, limit=10;
 let lendo=false, unidadeAuto="", barcodeFinal="";
-const beep=document.getElementById("beep");
 
-/* ===== LOGIN ===== */
 btnLogin.onclick = async ()=>{
   const {data} = await sb.from("usuarios")
     .select("*")
@@ -278,12 +237,10 @@ btnLogin.onclick = async ()=>{
     .single();
 
   if(!data) return alert("Usuário ou senha inválidos");
-
   localStorage.setItem("usuario",JSON.stringify(data.usuario));
   location.reload();
 };
 
-/* ===== PERFIL ===== */
 if(usuarioLogado){
   loginArea.style.display="none";
   appArea.style.display="block";
@@ -299,19 +256,17 @@ if(usuarioLogado){
 
 function toggleMenu(){
   const m=document.getElementById("menuPerfil");
-  m.style.display = m.style.display==="block" ? "none" : "block";
+  m.style.display=m.style.display==="block"?"none":"block";
 }
 function logout(){
   localStorage.removeItem("usuario");
   location.reload();
 }
 
-/* ===== BARCODE ===== */
 function normalizar(c){
   return "0"+String(c).replace(/\D/g,"");
 }
 
-/* ===== BUSCAR PRODUTO ===== */
 async function buscarProduto(code){
   barcodeFinal=code;
   const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
@@ -321,33 +276,33 @@ async function buscarProduto(code){
   produto.value=j.produto.descricao;
   unidadeAuto=j.produto.unidadeDeVenda;
   unidadeBox.innerHTML=`<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
-  beep.play();
-  if(lendo){Quagga.stop();lendo=false;}
+  document.getElementById("beep").play();
+  fecharCamera();
 }
 
-/* ===== MANUAL ===== */
 btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ===== CAMERA ===== */
-btnCamera.onclick=()=>{
-  if(lendo) return;
-  lendo=true;
+btnOpenCamera.onclick=()=>{
+  camera.style.display="block";
+  btnOpenCamera.style.display="none";
+  btnCloseCamera.style.display="block";
   Quagga.init({
     inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
-    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]},
-    locate:true
-  },err=>{
-    if(err) return alert("Erro câmera");
-    Quagga.start();
-  });
-  Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
+    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+  },()=>Quagga.start());
 };
 
-/* ===== ENVIO ===== */
+function fecharCamera(){
+  if(lendo) Quagga.stop();
+  camera.style.display="none";
+  btnOpenCamera.style.display="block";
+  btnCloseCamera.style.display="none";
+}
+
+btnCloseCamera.onclick=fecharCamera;
+
 btnEnviar.onclick=async()=>{
   if(!setor.value||!produto.value||!quantidade.value) return alert("Preencha tudo");
-  overlay.style.display="flex";
-
   await sb.from("requisicoes").insert({
     usuario:usuarioLogado,
     setor:setor.value,
@@ -358,18 +313,12 @@ btnEnviar.onclick=async()=>{
     barcode:barcodeFinal,
     status:"PENDENTE"
   });
-
-  overlay.style.display="none";
-  alerta.style.display="block";
-  setTimeout(()=>alerta.style.display="none",3000);
-
   limparCampos();
   page=0;
   historico.innerHTML="";
   carregarHistorico();
 };
 
-/* ===== HISTÓRICO ===== */
 async function carregarHistorico(){
   const seteDias=new Date(Date.now()-7*86400000).toISOString();
   const {data}=await sb.from("requisicoes")
@@ -381,58 +330,42 @@ async function carregarHistorico(){
 
   data.forEach(r=>{
     const horas=(Date.now()-new Date(r.created_at))/3600000;
-    historico.innerHTML+=`
-      <tr>
+    historico.insertAdjacentHTML("beforeend",`
+      <tr id="row-${r.id}">
         <td>${r.produto}</td>
         <td>${r.unidade}</td>
         <td>${r.quantidade}</td>
         <td>${r.setor}</td>
         <td>${r.status}</td>
-        <td>${horas<=1?`<button class="action-delete" onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
-      </tr>`;
+        <td>${horas<=1?`<button class="action-delete" onclick="excluir('${r.id}',this)">Excluir</button>`:"-"}</td>
+      </tr>
+    `);
   });
-
   btnMais.style.display=data.length===limit?"block":"none";
   page++;
 }
+
 btnMais.onclick=carregarHistorico;
-async function excluir(id) {
-  if (!confirm("Excluir requisição?")) return;
 
-  const { data, error } = await sb.rpc("excluir_requisicao", {
-    p_id: id,
-    p_usuario: usuarioLogado
-  });
+async function excluir(id,btn){
+  if(!confirm("Excluir requisição?")) return;
+  btn.classList.add("loading");
 
-  if (error) {
-    alert("Erro ao excluir");
-    console.error(error);
-    return;
-  }
-
-  if (!data) {
+  const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
+  if(!data){
     alert("Você só pode excluir até 1 hora após o envio");
+    btn.classList.remove("loading");
     return;
   }
-
-  historico.innerHTML = "";
-  page = 0;
-  carregarHistorico();
+  document.getElementById("row-"+id).remove();
 }
 
-
-/* ===== UTIL ===== */
 function limparCampos(){
   barcode.value="";
   produto.value="";
   quantidade.value="";
   observacoes.value="";
   unidadeBox.innerHTML="";
-}
-
-/* ===== PWA ===== */
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("/service-worker.js");
 }
 </script>
 </body>
