@@ -302,12 +302,15 @@ btnLogin.onclick=async()=>{
 };
 
 /* ===== INIT ===== */
-function init(){
- loginArea.classList.add("hidden");
- appArea.classList.remove("hidden");
- btnLogout.classList.remove("hidden");
- carregarHistorico();
+async function init(){
+  loginArea.classList.add("hidden");
+  appArea.classList.remove("hidden");
+  btnLogout.classList.remove("hidden");
+
+  await gerarTokenVF();   // 🔥 ISSO É O QUE FALTAVA
+  carregarHistorico();
 }
+
 if(usuarioLogado) init();
 
 /* ===== LOGOUT ===== */
@@ -449,6 +452,23 @@ buscaProdutoId.onchange = async () => {
   }
 };
 
+async function gerarTokenVF() {
+  try {
+    const r = await fetch("/api/auth");
+    const j = await r.json();
+
+    if (!j.accessToken) {
+      console.error("Auth inválido:", j);
+      alert("Erro ao autenticar no Varejo Fácil");
+      return;
+    }
+
+    localStorage.setItem("vf_token", j.accessToken);
+    console.log("TOKEN VF GERADO");
+  } catch (err) {
+    console.error("Erro auth VF:", err);
+  }
+}
 
 </script>
 </body>
