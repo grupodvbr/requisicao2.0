@@ -33,8 +33,6 @@ body{
   padding:20px;
   position:relative;
 }
-
-/* ===== TOPO ===== */
 .topbar{
   display:flex;
   justify-content:space-between;
@@ -56,8 +54,6 @@ body{
   font-size:12px;
   cursor:pointer;
 }
-
-/* ===== FORM ===== */
 label{font-weight:700;margin-top:14px;display:block}
 input,select,textarea{
   width:100%;
@@ -69,7 +65,6 @@ input,select,textarea{
 }
 input[readonly]{background:#f1f5f9}
 textarea{min-height:80px;resize:none}
-
 button{
   width:100%;
   padding:14px;
@@ -83,8 +78,6 @@ button{
 }
 .btn-primary{background:#2563eb;color:#fff}
 .btn-muted{background:#e5e7eb;color:#0f172a}
-
-/* overlay botão */
 button.loading{pointer-events:none}
 button.loading::after{
   content:"Enviando…";
@@ -96,8 +89,6 @@ button.loading::after{
   justify-content:center;
   border-radius:16px;
 }
-
-/* ===== CAMERA ===== */
 #camera{
   display:none;
   width:100%;
@@ -108,7 +99,6 @@ button.loading::after{
   overflow:hidden;
 }
 #camera video{width:100%;height:100%;object-fit:cover}
-
 #codigoLido{
   margin-top:8px;
   text-align:center;
@@ -116,8 +106,6 @@ button.loading::after{
   font-size:14px;
   color:#2563eb;
 }
-
-/* ===== BADGE ===== */
 .badge{
   display:inline-block;
   background:#e0f2fe;
@@ -128,8 +116,6 @@ button.loading::after{
   margin-top:10px;
   font-size:13px;
 }
-
-/* ===== HISTÓRICO ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -150,18 +136,15 @@ th{background:#f1f5f9}
   padding:6px 10px;
   font-weight:800;
 }
-
 .hidden{display:none}
-.btn-logout{
-  width:auto;              /* 🔥 ISSO resolve */
-  padding:6px 12px;        /* diminui altura */
-  margin:0;                /* remove espaçamento extra */
-  font-size:12px;
-  border-radius:999px;
-  background:#fee2e2;
-  color:#991b1b;
+.item{
+  background:#f1f5f9;
+  padding:12px;
+  border-radius:12px;
+  margin-top:6px;
+  cursor:pointer;
 }
-
+.item:hover{background:#e2e8f0}
 </style>
 </head>
 
@@ -170,10 +153,9 @@ th{background:#f1f5f9}
 
 <div class="topbar">
   <h1>📋 Requisição</h1>
-<button class="btn-logout" id="btnLogout">Sair</button>
+  <button class="btn-logout" id="btnLogout">Sair</button>
 </div>
 
-<!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
   <input id="usuario">
@@ -182,7 +164,6 @@ th{background:#f1f5f9}
   <button class="btn-primary" id="btnLogin">Entrar</button>
 </div>
 
-<!-- APP -->
 <div id="appArea" class="hidden">
 
 <label>Setor</label>
@@ -192,19 +173,36 @@ th{background:#f1f5f9}
   <option>Bar</option>
 </select>
 
-<label>Código de Barras</label>
-<input id="barcode" placeholder="Digite ou escaneie">
+<label>Modo de busca</label>
+<select id="modoBusca">
+  <option value="barcode">Código de barras</option>
+  <option value="nome">Nome do produto</option>
+  <option value="id">ID do produto</option>
+</select>
 
-<button class="btn-muted" id="btnManual">Buscar manual</button>
-<button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
-<button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
+<div id="buscaBarcode">
+  <label>Código de Barras</label>
+  <input id="barcode" placeholder="Digite ou escaneie">
+  <button class="btn-muted" id="btnManual">Buscar manual</button>
+  <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
+  <button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
+  <div id="camera"></div>
+  <div id="codigoLido"></div>
+</div>
 
-<div id="camera"></div>
-<div id="codigoLido"></div>
+<div id="buscaNome" class="hidden">
+  <label>Buscar por nome</label>
+  <input id="buscaProdutoNome" placeholder="Digite o nome">
+  <div id="listaProdutos"></div>
+</div>
+
+<div id="buscaId" class="hidden">
+  <label>ID do produto</label>
+  <input id="buscaProdutoId" type="number" inputmode="numeric">
+</div>
 
 <label>Produto</label>
 <input id="produto" readonly>
-
 <div id="unidadeBox"></div>
 
 <label>Quantidade</label>
@@ -218,9 +216,7 @@ th{background:#f1f5f9}
 <h3 style="margin-top:20px">Histórico (7 dias)</h3>
 <table>
 <thead>
-<tr>
-<th>Produto</th><th>Qtd</th><th>Status</th><th>Ação</th>
-</tr>
+<tr><th>Produto</th><th>Qtd</th><th>Status</th><th>Ação</th></tr>
 </thead>
 <tbody id="historico"></tbody>
 </table>
@@ -234,7 +230,6 @@ th{background:#f1f5f9}
 </div>
 
 <script>
-/* ===== SUPABASE ===== */
 const sb=supabase.createClient(
  "https://mybsriouiwqsdufujbsc.supabase.co",
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
@@ -242,17 +237,13 @@ const sb=supabase.createClient(
 
 const normalizar=c=>"0"+String(c).replace(/\D/g,"");
 
-/* ===== ESTADO ===== */
 let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
-let unidadeAuto="",barcodeFinal="";
-let enviando=false;
+let unidadeAuto="",barcodeFinal="",enviando=false;
 
-/* ===== SETOR PERSISTENTE ===== */
 const setorEl=document.getElementById("setor");
 setorEl.value=localStorage.getItem("setor")||setorEl.value;
 setorEl.onchange=()=>localStorage.setItem("setor",setorEl.value);
 
-/* ===== LOGIN ===== */
 btnLogin.onclick=async()=>{
  const {data}=await sb.from("usuarios")
  .select("*")
@@ -260,12 +251,11 @@ btnLogin.onclick=async()=>{
  .eq("senha",senha.value)
  .eq("ativo",true)
  .single();
- if(!data) return;
+ if(!data)return;
  localStorage.setItem("usuario",JSON.stringify(data.usuario));
  init();
 };
 
-/* ===== INIT ===== */
 function init(){
  loginArea.classList.add("hidden");
  appArea.classList.remove("hidden");
@@ -274,13 +264,20 @@ function init(){
 }
 if(usuarioLogado) init();
 
-/* ===== LOGOUT ===== */
 btnLogout.onclick=()=>{
  localStorage.removeItem("usuario");
  location.reload();
 };
 
-/* ===== BUSCAR PRODUTO (SEM ERRO VISUAL) ===== */
+modoBusca.onchange=()=>{
+ buscaBarcode.classList.add("hidden");
+ buscaNome.classList.add("hidden");
+ buscaId.classList.add("hidden");
+ if(modoBusca.value==="barcode")buscaBarcode.classList.remove("hidden");
+ if(modoBusca.value==="nome")buscaNome.classList.remove("hidden");
+ if(modoBusca.value==="id")buscaId.classList.remove("hidden");
+};
+
 async function buscarProduto(code){
  barcodeFinal=code;
  codigoLido.textContent=`Lendo código: ${code}`;
@@ -297,7 +294,6 @@ async function buscarProduto(code){
  }catch{}
 }
 
-/* ===== CAMERA ===== */
 btnOpenCamera.onclick=()=>{
  camera.style.display="block";
  btnOpenCamera.classList.add("hidden");
@@ -309,6 +305,7 @@ btnOpenCamera.onclick=()=>{
  },()=>Quagga.start());
  Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
 };
+
 btnCloseCamera.onclick=fecharCamera;
 function fecharCamera(){
  Quagga.stop();
@@ -316,9 +313,42 @@ function fecharCamera(){
  btnOpenCamera.classList.remove("hidden");
  btnCloseCamera.classList.add("hidden");
 }
+
 btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ===== ENVIAR ===== */
+buscaProdutoNome.onkeyup=async()=>{
+ const q=buscaProdutoNome.value;
+ if(q.length<2)return;
+ const r=await fetch(`/api/buscar-nome?q=${q}`);
+ const j=await r.json();
+ listaProdutos.innerHTML="";
+ (j.items||[]).forEach(p=>{
+  listaProdutos.insertAdjacentHTML("beforeend",
+   `<div class="item" onclick='selecionarProduto(${JSON.stringify(p)})'>${p.descricao}</div>`
+  );
+ });
+};
+
+function selecionarProduto(p){
+ produto.value=p.descricao;
+ unidadeAuto=p.unidadeDeVenda;
+ unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
+ listaProdutos.innerHTML="";
+}
+
+buscaProdutoId.onchange=async()=>{
+ const id=buscaProdutoId.value;
+ if(!id)return;
+ const r=await fetch(`/api/produto?id=${id}`);
+ const j=await r.json();
+ if(j?.items?.length){
+  const p=j.items[0];
+  produto.value=p.descricao;
+  unidadeAuto=p.unidadeDeVenda;
+  unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
+ }
+};
+
 btnEnviar.onclick=async()=>{
  if(enviando||!produto.value||!quantidade.value)return;
  enviando=true;
@@ -339,7 +369,6 @@ btnEnviar.onclick=async()=>{
  carregarHistorico();
 };
 
-/* ===== HISTÓRICO ===== */
 async function carregarHistorico(){
  historico.innerHTML="";
  const seteDias=new Date(Date.now()-7*86400000).toISOString();
@@ -360,7 +389,6 @@ async function carregarHistorico(){
  });
 }
 
-/* ===== EXCLUIR ===== */
 async function excluir(id){
  const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
  if(data) document.getElementById("row-"+id)?.remove();
