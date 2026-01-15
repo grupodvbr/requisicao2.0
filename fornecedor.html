@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Responder Cotação</title>
+<style>
+  body{font-family:"Inter",Arial,sans-serif;background:#f9fafb;margin:0;padding:20px;}
+  .box{max-width:900px;margin:auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);}
+  h1{text-align:center;}
+  table{width:100%;border-collapse:collapse;margin-top:15px;}
+  th,td{border:1px solid #ddd;padding:8px;}
+  th{background:#2563eb;color:#fff;}
+  input,button{padding:8px;border:1px solid #ccc;border-radius:6px;}
+  input[type=number]{width:140px;}
+  input[type=text]{width:100%;}
+  button{background:#2563eb;color:#fff;cursor:pointer;margin-top:15px;width:100%;font-size:1em;}
+  button:hover{background:#1d4ed8;}
+</style>
+</head>
+<body>
+<h1 id="titulo">Responder Cotação</h1>
+<div class="box">
+  <p id="info">Exibindo todas as cotações pendentes</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th><th>Qtd</th><th>Unid</th><th>Preço Unit.</th><th>Obs</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <button onclick="enviar()">📤 Enviar Respostas</button>
+</div>
+
+<script>
+const URL_API = "https://script.google.com/macros/s/AKfycbxlfAYtFGJXNiB3hoD2U_Nv2YvSLs0DBq63OEeQMHoUcwrAD3SLg-uLJIN2ckEmt1Zx/exec";
+
+let fornecedor="",empresa="",painelCodigo="",itens=[];
+
+function qs(k){ return new URLSearchParams(location.search).get(k) || ""; }
+function toNumberBR(v){ if(v==null||v==="") return null; return Number(String(v).replace(/\./g,'').replace(',','.')); }
+
+window.onload=async ()=>{
+  fornecedor = qs("fornecedor") || "FORNECEDOR";
+  empresa = qs("empresa") || "";
+  painelCodigo = qs("painel") || qs("codigo") || ""; // aceita ?painel= ou ?codigo=
+  document.getElementById("titulo").innerText=`Responder Cotação - ${fornecedor} (${empresa} • ${painelCodigo})`;
+  await carregarItens();
+};
+
+async function carregarItens(){
+  let url=`${URL_API}?action=itenspendentes`;
+  if(empresa) url+=`&empresa=${encodeURIComponent(empresa)}`;
+  if(painelCodigo) url+=`&painel=${encodeURIComponent(painelCodigo)}`;
+  const res=await fetch(url); const out=await res.json();
+  if(!out.ok || !out.items || !out.items.length){
+    document.getElementById("tbody").innerHTML="<tr><td colspan=5>✅ Nenhuma cotação pendente</td></tr>"; return;
+  }
+  itens = out.items; render();
+}
+
+function render(){
+  const tb=document.getElementById("tbody"); tb.innerHTML="";
+  itens.forEach(it=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${it.produto}</td>
+      <td>${it.quantidade}</td>
+      <td>${it.unidade}</td>
+      <td><input type="number" step="0.01" inputmode="decimal" placeholder="0,00"
+                 data-rid="${it.rid}" data-codigo="${it.codigo}" data-produto="${it.produto}"></td>
+      <td><input type="text" placeholder="Observação"></td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+async function enviar(){
+  const linhas=document.querySelectorAll("#tbody tr"); let enviados=0;
+  for(const ln of linhas){
+    const inputNum=ln.querySelector('input[type="number"]');
+    const inputObs=ln.querySelector('input[type="text"]');
+    if(!inputNum) continue;
+    const precoStr=inputNum.value;
+    if(!precoStr) continue;
+
+    const preco = toNumberBR(precoStr);
+    if(isNaN(preco)){ alert("Informe preços válidos (ex: 12,34)"); return; }
+
+    const rid=inputNum.dataset.rid;
+    const codigo=inputNum.dataset.codigo;
+    const produto=inputNum.dataset.produto;
+    const obs=inputObs?.value||"";
+
+    const payload={
+      action:"enviar_resposta",
+      rid,
+      produtoCodigo: codigo,
+      produtoNome: produto,
+      fornecedor,
+      preco,
+      observacoes: obs,
+      empresa,
+      painelCodigo
+    };
+
+    const res=await fetch(URL_API,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    const out=await res.json();
+    if(out.ok) enviados++;
+  }
+  alert(`✅ ${enviados} respostas registradas para ${fornecedor}`);
+  if(enviados>0) await carregarItens();
+}
+</script>
+</body>
+</html>
