@@ -5,52 +5,57 @@
 <title>Requisição de Compras – DELÍCIA GOURMET</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
+
 <style>
 body{
-  font-family:Arial, sans-serif;
-  background:#f5f5f5;
+  font-family:Inter, Arial, sans-serif;
+  background:#f4f6f8;
   display:flex;
   justify-content:center;
   padding:20px;
 }
 .container{
   background:#fff;
-  border-radius:12px;
-  box-shadow:0 0 15px rgba(0,0,0,.1);
-  max-width:540px;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,.12);
+  max-width:520px;
   width:100%;
-  padding:22px;
+  padding:24px;
 }
-h2{text-align:center;margin-bottom:20px}
-label{display:block;margin:12px 0 6px;font-weight:bold}
+h2{text-align:center;margin-bottom:18px}
+label{font-weight:600;margin-top:12px;display:block}
 input,select,textarea{
   width:100%;
   padding:12px;
-  border:1px solid #ccc;
-  border-radius:6px;
-  font-size:16px;
+  margin-top:6px;
+  border:1px solid #cbd5e1;
+  border-radius:8px;
+  font-size:15px;
 }
 input[readonly]{background:#f1f5f9}
-textarea{resize:vertical;min-height:70px}
+textarea{min-height:70px}
 button{
   width:100%;
   padding:14px;
-  margin:8px 0;
+  margin-top:10px;
   border:none;
-  border-radius:6px;
-  font-weight:bold;
-  font-size:16px;
+  border-radius:10px;
+  font-weight:700;
+  font-size:15px;
   cursor:pointer;
 }
-.btn-blue{background:#2196F3;color:#fff}
+.btn-primary{background:#2563eb;color:#fff}
 .btn-dark{background:#0f172a;color:#fff}
-.btn-red{background:#f44336;color:#fff}
+.btn-success{background:#16a34a;color:#fff}
 
 #camera{
   width:100%;
   height:260px;
   background:#000;
-  border-radius:10px;
+  border-radius:12px;
   margin-top:10px;
   overflow:hidden;
 }
@@ -62,34 +67,24 @@ button{
 
 .badge{
   display:inline-block;
-  padding:6px 12px;
   background:#e0f2fe;
   color:#0369a1;
+  padding:6px 14px;
   border-radius:999px;
-  font-weight:bold;
+  font-weight:700;
   margin-top:6px;
+  font-size:13px;
 }
 
-table{
-  width:100%;
-  border-collapse:collapse;
-  margin-top:20px;
-  font-size:14px;
-}
-th,td{
-  border:1px solid #ddd;
-  padding:6px;
-  text-align:center;
-}
-
-pre{
-  background:#020617;
-  color:#e5e7eb;
-  padding:12px;
+.alert{
+  background:#dcfce7;
+  color:#166534;
+  padding:10px;
   border-radius:8px;
-  font-size:12px;
-  max-height:260px;
-  overflow:auto;
+  text-align:center;
+  font-weight:700;
+  margin-top:10px;
+  display:none;
 }
 </style>
 </head>
@@ -97,15 +92,18 @@ pre{
 <body>
 <div class="container">
 
-<h2>📋 Requisição de Compras<br>DELÍCIA GOURMET</h2>
+<h2>📋 Requisição de Compras</h2>
 
-<label>Solicitante</label>
-<select id="solicitante">
-  <option value="">Selecione</option>
-  <option>ADM</option>
-  <option>Dheure</option>
-  <option>Marcelo</option>
-</select>
+<!-- LOGIN -->
+<label>Usuário</label>
+<input id="usuario">
+
+<label>Senha</label>
+<input id="senha" type="password">
+
+<button class="btn-dark" id="btnLogin">🔐 Entrar</button>
+
+<hr>
 
 <label>Setor</label>
 <select id="setor">
@@ -115,18 +113,16 @@ pre{
   <option>Bar</option>
 </select>
 
-<hr>
-
 <label>Código de Barras</label>
-<input id="barcode" placeholder="Digite ou escaneie o código">
+<input id="barcode">
 
 <button class="btn-dark" id="btnManual">🔍 Pesquisar manualmente</button>
-<button class="btn-blue" id="btnCamera">📷 Ler com a câmera</button>
+<button class="btn-primary" id="btnCamera">📷 Ler com a câmera</button>
 
 <div id="camera"></div>
 
 <label>Produto</label>
-<input id="item" readonly>
+<input id="produto" readonly>
 
 <div id="unidadeBox"></div>
 
@@ -136,187 +132,110 @@ pre{
 <label>Observações</label>
 <textarea id="observacoes"></textarea>
 
-<button id="btnEnviar" class="btn-blue">ENVIAR ITEM</button>
-<button class="btn-red" onclick="limparTabela()">LIMPAR HISTÓRICO</button>
+<button class="btn-success" id="btnEnviar">ENVIAR REQUISIÇÃO</button>
 
-<h3>Histórico</h3>
-<table id="historico">
-<tr>
-  <th>Produto</th>
-  <th>Unidade</th>
-  <th>Qtd</th>
-  <th>Setor</th>
-  <th>Hora</th>
-  <th>Status</th>
-</tr>
-</table>
+<div class="alert" id="alerta">✅ Requisição enviada com sucesso!</div>
 
-<h3>🧪 DEBUG</h3>
-<pre id="debug"></pre>
+<audio id="beep">
+<source src="data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA">
+</audio>
 
 </div>
 
-<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
-
 <script>
-const URL_GAS="https://script.google.com/macros/s/AKfycbyXFEAq56G7oQdeCzGw_SdOnQ7XkRPMzBoS1V09Pkk_wI916FGO9nn4e9FfeNmv8KV9KA/exec";
+const SUPABASE_URL = "https://mybsriouiwqsdufujbsc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const debugEl=document.getElementById("debug");
-const unidadeBox=document.getElementById("unidadeBox");
-const cameraEl=document.getElementById("camera");
+const beep = document.getElementById("beep");
+let usuarioLogado = null;
+let lendo=false, buscando=false, unidadeAuto="", barcodeFinal="";
 
-let lendo=false;
-let buscando=false;
-let ultimoCodigo=null;
-let unidadeAuto="";
-let enviados=JSON.parse(localStorage.getItem("enviados"))||[];
+/* LOGIN */
+btnLogin.onclick = async ()=>{
+  const u = usuario.value.trim();
+  const s = senha.value.trim();
+  if(!u || !s) return alert("Informe usuário e senha");
 
-function log(t){
-  console.log(t);
-  debugEl.textContent+=t+"\n";
-  debugEl.scrollTop=debugEl.scrollHeight;
-}
+  const {data} = await sb
+    .from("usuarios")
+    .select("*")
+    .eq("usuario",u)
+    .eq("senha",s)
+    .eq("ativo",true)
+    .single();
 
-/* 🚨 REGRA ABSOLUTA: SEMPRE PREFIXA 0 */
-function normalizarCodigo(c){
-  c = String(c).replace(/\D/g,"").trim();
-  return "0" + c;
-}
+  if(!data) return alert("Usuário ou senha inválidos");
 
-/* 🔍 BUSCA MANUAL */
-btnManual.onclick=()=>{
-  const c=barcode.value.trim();
-  if(!c) return;
-  const finalCode = normalizarCodigo(c);
-  log("➡️ Enviando para API: " + finalCode);
-  buscarProduto(finalCode);
+  usuarioLogado = data.usuario;
+  alert("Login realizado com sucesso");
 };
 
-/* 📷 CAMERA */
+/* NORMALIZA */
+function normalizar(c){
+  return "0"+String(c).replace(/\D/g,"");
+}
+
+/* BUSCAR PRODUTO */
+async function buscarProduto(code){
+  barcodeFinal = code;
+  const r = await fetch(`/api/buscar-barcode?barcode=${code}`);
+  const j = await r.json();
+  if(!j.produto) return alert("Produto não encontrado");
+
+  produto.value = j.produto.descricao;
+  unidadeAuto = j.produto.unidadeDeVenda;
+  unidadeBox.innerHTML = `<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
+  beep.play();
+  if(lendo){Quagga.stop();lendo=false;}
+}
+
+/* MANUAL */
+btnManual.onclick=()=>{
+  if(!barcode.value) return;
+  buscarProduto(normalizar(barcode.value));
+};
+
+/* CAMERA */
 btnCamera.onclick=()=>{
   if(lendo) return;
   lendo=true;
-  log("📷 Abrindo câmera");
 
   Quagga.init({
-    inputStream:{
-      type:"LiveStream",
-      target:cameraEl,
-      constraints:{facingMode:"environment"}
-    },
-    decoder:{
-      readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]
-    },
+    inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
+    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]},
     locate:true
   },err=>{
-    if(err){
-      log("❌ ERRO CAMERA: "+err.message);
-      lendo=false;
-      return;
-    }
+    if(err) return alert("Erro câmera");
     Quagga.start();
-    log("✅ Câmera ativa");
   });
 
-  Quagga.offDetected();
-  Quagga.onDetected(res=>{
+  Quagga.onDetected(r=>{
     if(buscando) return;
-    const raw=res.codeResult?.code;
-    if(!raw) return;
-
-    const finalCode = normalizarCodigo(raw);
-    if(finalCode===ultimoCodigo) return;
-    ultimoCodigo=finalCode;
-
-    log("📸 Código lido: "+raw);
-    log("➡️ Enviando para API: "+finalCode);
-
-    buscarProduto(finalCode);
+    buscarProduto(normalizar(r.codeResult.code));
   });
 };
 
-/* 🔎 BUSCAR PRODUTO */
-async function buscarProduto(code){
-  buscando=true;
-  barcode.value=code;
+/* ENVIAR */
+btnEnviar.onclick = async ()=>{
+  if(!usuarioLogado) return alert("Faça login");
+  if(!setor.value) return alert("Selecione o setor");
+  if(!produto.value || !quantidade.value) return alert("Produto e quantidade obrigatórios");
 
-  try{
-    const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
-    const j=await r.json();
-
-    log("📦 API RESPONSE:");
-    log(JSON.stringify(j,null,2));
-
-    if(!j.produto){
-      log("❌ Produto não encontrado");
-      return;
-    }
-
-    item.value=j.produto.descricao.trim();
-    unidadeAuto=j.produto.unidadeDeVenda||"";
-
-    unidadeBox.innerHTML=`<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
-
-    if(lendo){
-      Quagga.stop();
-      lendo=false;
-      log("🛑 Câmera parada");
-    }
-
-  }catch(e){
-    log("❌ ERRO: "+e.message);
-  }finally{
-    buscando=false;
-  }
-}
-
-/* 📤 ENVIO */
-btnEnviar.onclick=()=>{
-  if(!item.value||!quantidade.value) return;
-
-  enviados.push({
-    item:item.value,
-    unidade:unidadeAuto,
-    quantidade:quantidade.value,
-    setor:setor.value,
-    hora:new Date().toLocaleTimeString(),
-    status:"Enviado"
+  await sb.from("requisicoes").insert({
+    usuario: usuarioLogado,
+    setor: setor.value,
+    produto: produto.value,
+    unidade: unidadeAuto,
+    quantidade: quantidade.value,
+    observacoes: observacoes.value,
+    barcode: barcodeFinal,
+    status: "PENDENTE"
   });
 
-  atualizarTabela();
-
-  fetch(URL_GAS,{
-    method:"POST",
-    body:JSON.stringify({
-      acao:"cadastrar",
-      item:item.value,
-      unidade:unidadeAuto,
-      quantidade:quantidade.value,
-      setor:setor.value,
-      solicitante:solicitante.value,
-      observacoes:observacoes.value
-    })
-  });
+  alerta.style.display="block";
+  setTimeout(()=>alerta.style.display="none",3000);
 };
-
-function atualizarTabela(){
-  historico.innerHTML=`<tr>
-    <th>Produto</th><th>Unidade</th><th>Qtd</th>
-    <th>Setor</th><th>Hora</th><th>Status</th>
-  </tr>`;
-  enviados.forEach(i=>{
-    const r=historico.insertRow();
-    Object.values(i).forEach(v=>r.insertCell().innerText=v);
-  });
-  localStorage.setItem("enviados",JSON.stringify(enviados));
-}
-
-function limparTabela(){
-  enviados=[];
-  atualizarTabela();
-}
-
-atualizarTabela();
 </script>
 
 </body>
