@@ -397,12 +397,27 @@ async function carregarHistorico(){
 }
 btnMais.onclick=carregarHistorico;
 
-/* ===== EXCLUIR ===== */
 async function excluir(id){
   if(!confirm("Excluir requisição?")) return;
-  await sb.from("requisicoes").delete().eq("id",id);
-  historico.innerHTML="";
-  page=0;
+
+  const { data, error } = await sb.rpc("excluir_requisicao", {
+    p_id: id,
+    p_usuario: usuarioLogado
+  });
+
+  if(error){
+    alert("Erro ao excluir");
+    console.error(error);
+    return;
+  }
+
+  if(!data){
+    alert("❌ Você só pode excluir até 1 hora após o envio");
+    return;
+  }
+
+  historico.innerHTML = "";
+  page = 0;
   carregarHistorico();
 }
 
