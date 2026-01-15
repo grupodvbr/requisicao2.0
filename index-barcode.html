@@ -7,19 +7,16 @@
 <meta name="viewport"
 content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 
-<meta name="theme-color" content="#1e40af">
-<link rel="manifest" href="/manifest.json">
-
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;touch-action:manipulation}
 body{
+  margin:0;
   font-family:Inter,Arial;
-  background:linear-gradient(180deg,#eef2ff,#f8fafc);
+  background:#eef2ff;
   display:flex;
   justify-content:center;
   padding:12px;
@@ -31,20 +28,11 @@ body{
   max-width:520px;
   width:100%;
   padding:20px;
-  position:relative;
 }
-
-/* ===== TOPO ===== */
 .topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  margin-bottom:10px;
-}
-.topbar h1{
-  margin:0;
-  font-size:18px;
-  font-weight:800;
 }
 .btn-logout{
   background:#fee2e2;
@@ -54,10 +42,7 @@ body{
   border-radius:999px;
   font-weight:800;
   font-size:12px;
-  cursor:pointer;
 }
-
-/* ===== FORM ===== */
 label{font-weight:700;margin-top:14px;display:block}
 input,select,textarea{
   width:100%;
@@ -68,8 +53,6 @@ input,select,textarea{
   font-size:15px;
 }
 input[readonly]{background:#f1f5f9}
-textarea{min-height:80px;resize:none}
-
 button{
   width:100%;
   padding:14px;
@@ -77,27 +60,10 @@ button{
   border:none;
   border-radius:16px;
   font-weight:800;
-  font-size:15px;
   cursor:pointer;
-  position:relative;
 }
 .btn-primary{background:#2563eb;color:#fff}
-.btn-muted{background:#e5e7eb;color:#0f172a}
-
-/* overlay botão */
-button.loading{pointer-events:none}
-button.loading::after{
-  content:"Enviando…";
-  position:absolute;inset:0;
-  background:rgba(0,0,0,.35);
-  color:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:16px;
-}
-
-/* ===== CAMERA ===== */
+.btn-muted{background:#e5e7eb}
 #camera{
   display:none;
   width:100%;
@@ -105,19 +71,8 @@ button.loading::after{
   background:#000;
   border-radius:18px;
   margin-top:12px;
-  overflow:hidden;
 }
 #camera video{width:100%;height:100%;object-fit:cover}
-
-#codigoLido{
-  margin-top:8px;
-  text-align:center;
-  font-weight:800;
-  font-size:14px;
-  color:#2563eb;
-}
-
-/* ===== BADGE ===== */
 .badge{
   display:inline-block;
   background:#e0f2fe;
@@ -128,8 +83,20 @@ button.loading::after{
   margin-top:10px;
   font-size:13px;
 }
-
-/* ===== HISTÓRICO ===== */
+.list{
+  background:#fff;
+  border:1px solid #ddd;
+  border-radius:10px;
+  margin-top:6px;
+  max-height:220px;
+  overflow:auto;
+}
+.item{
+  padding:10px;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
+}
+.item:hover{background:#f1f5f9}
 table{
   width:100%;
   border-collapse:collapse;
@@ -141,27 +108,7 @@ th,td{
   padding:8px;
   text-align:center;
 }
-th{background:#f1f5f9}
-.btn-delete{
-  background:#fee2e2;
-  color:#991b1b;
-  border:none;
-  border-radius:10px;
-  padding:6px 10px;
-  font-weight:800;
-}
-
 .hidden{display:none}
-.btn-logout{
-  width:auto;              /* 🔥 ISSO resolve */
-  padding:6px 12px;        /* diminui altura */
-  margin:0;                /* remove espaçamento extra */
-  font-size:12px;
-  border-radius:999px;
-  background:#fee2e2;
-  color:#991b1b;
-}
-
 </style>
 </head>
 
@@ -169,11 +116,10 @@ th{background:#f1f5f9}
 <div class="container">
 
 <div class="topbar">
-  <h1>📋 Requisição</h1>
-<button class="btn-logout" id="btnLogout">Sair</button>
+  <h2>📋 Requisição</h2>
+  <button class="btn-logout" id="btnLogout">Sair</button>
 </div>
 
-<!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
   <input id="usuario">
@@ -182,7 +128,6 @@ th{background:#f1f5f9}
   <button class="btn-primary" id="btnLogin">Entrar</button>
 </div>
 
-<!-- APP -->
 <div id="appArea" class="hidden">
 
 <label>Setor</label>
@@ -192,35 +137,38 @@ th{background:#f1f5f9}
   <option>Bar</option>
 </select>
 
-<label>Código de Barras</label>
-<input id="barcode" placeholder="Digite ou escaneie">
+<label>Modo de busca</label>
+<select id="modoBusca">
+  <option value="barcode">Código de barras</option>
+  <option value="nome">Nome do produto</option>
+  <option value="id">ID do produto</option>
+</select>
 
-<button class="btn-muted" id="btnManual">Buscar manual</button>
-<button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
-<button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
+<label>Buscar produto</label>
+<input id="busca">
+<div id="lista" class="list hidden"></div>
+
+<button class="btn-muted" id="btnManual">Buscar</button>
+<button class="btn-primary" id="btnCamera">Abrir câmera</button>
 
 <div id="camera"></div>
-<div id="codigoLido"></div>
 
 <label>Produto</label>
 <input id="produto" readonly>
-
 <div id="unidadeBox"></div>
 
 <label>Quantidade</label>
-<input type="number" id="quantidade" min="1">
+<input type="number" id="quantidade" step="0.01">
 
 <label>Observações</label>
 <textarea id="observacoes"></textarea>
 
 <button class="btn-primary" id="btnEnviar">Enviar requisição</button>
 
-<h3 style="margin-top:20px">Histórico (7 dias)</h3>
+<h3>Histórico (7 dias)</h3>
 <table>
 <thead>
-<tr>
-<th>Produto</th><th>Qtd</th><th>Status</th><th>Ação</th>
-</tr>
+<tr><th>Produto</th><th>Qtd</th><th>Un</th><th>Status</th></tr>
 </thead>
 <tbody id="historico"></tbody>
 </table>
@@ -234,98 +182,100 @@ th{background:#f1f5f9}
 </div>
 
 <script>
-/* ===== SUPABASE ===== */
 const sb=supabase.createClient(
  "https://mybsriouiwqsdufujbsc.supabase.co",
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
 const normalizar=c=>"0"+String(c).replace(/\D/g,"");
-
-/* ===== ESTADO ===== */
 let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
 let unidadeAuto="",barcodeFinal="";
-let enviando=false;
 
-/* ===== SETOR PERSISTENTE ===== */
-const setorEl=document.getElementById("setor");
-setorEl.value=localStorage.getItem("setor")||setorEl.value;
-setorEl.onchange=()=>localStorage.setItem("setor",setorEl.value);
+setor.value=localStorage.getItem("setor")||setor.value;
+setor.onchange=()=>localStorage.setItem("setor",setor.value);
 
-/* ===== LOGIN ===== */
 btnLogin.onclick=async()=>{
  const {data}=await sb.from("usuarios")
- .select("*")
- .eq("usuario",usuario.value)
- .eq("senha",senha.value)
- .eq("ativo",true)
- .single();
- if(!data) return;
+ .select("*").eq("usuario",usuario.value).eq("senha",senha.value).eq("ativo",true).single();
+ if(!data)return;
  localStorage.setItem("usuario",JSON.stringify(data.usuario));
- init();
-};
-
-/* ===== INIT ===== */
-function init(){
- loginArea.classList.add("hidden");
- appArea.classList.remove("hidden");
- btnLogout.classList.remove("hidden");
- carregarHistorico();
-}
-if(usuarioLogado) init();
-
-/* ===== LOGOUT ===== */
-btnLogout.onclick=()=>{
- localStorage.removeItem("usuario");
  location.reload();
 };
 
-/* ===== BUSCAR PRODUTO (SEM ERRO VISUAL) ===== */
-async function buscarProduto(code){
- barcodeFinal=code;
- codigoLido.textContent=`Lendo código: ${code}`;
- try{
-  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
-  const j=await r.json();
-  if(j?.produto){
-   produto.value=j.produto.descricao;
-   unidadeAuto=j.produto.unidadeDeVenda;
-   unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
-   beep.play();
-   fecharCamera();
-  }
- }catch{}
+if(usuarioLogado){
+ loginArea.classList.add("hidden");
+ appArea.classList.remove("hidden");
+ carregarHistorico();
 }
 
-/* ===== CAMERA ===== */
-btnOpenCamera.onclick=()=>{
+btnLogout.onclick=()=>{localStorage.clear();location.reload();};
+
+busca.onkeyup=async()=>{
+ if(modoBusca.value!=="nome")return;
+ if(busca.value.length<2){lista.classList.add("hidden");return;}
+ const r=await fetch(`/api/produtos-busca?q=${busca.value}`);
+ const j=await r.json();
+ lista.innerHTML="";
+ (j.items||[]).forEach(p=>{
+  const d=document.createElement("div");
+  d.className="item";
+  d.textContent=`${p.id} - ${p.descricao}`;
+  d.onclick=()=>carregarProdutoDetalhe(p.id);
+  lista.appendChild(d);
+ });
+ lista.classList.remove("hidden");
+};
+
+async function carregarProdutoDetalhe(id){
+ const r=await fetch(`/api/produto-detalhe?id=${id}`);
+ const p=await r.json();
+ produto.value=p.descricao;
+ unidadeAuto=p.unidadeDeVenda;
+ unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
+ lista.classList.add("hidden");
+}
+
+btnManual.onclick=async()=>{
+ if(modoBusca.value==="barcode"){
+  buscarBarcode(normalizar(busca.value));
+ }
+ if(modoBusca.value==="id"){
+  carregarProdutoDetalhe(busca.value);
+ }
+};
+
+async function buscarBarcode(code){
+ barcodeFinal=code;
+ const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+ const j=await r.json();
+ if(j?.produto){
+  produto.value=j.produto.descricao;
+  unidadeAuto=j.produto.unidadeDeVenda;
+  unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
+  beep.play();
+  fecharCamera();
+ }
+}
+
+btnCamera.onclick=()=>{
  camera.style.display="block";
- btnOpenCamera.classList.add("hidden");
- btnCloseCamera.classList.remove("hidden");
- codigoLido.textContent="";
  Quagga.init({
   inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
   decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
  },()=>Quagga.start());
- Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
+ Quagga.onDetected(r=>buscarBarcode(normalizar(r.codeResult.code)));
 };
-btnCloseCamera.onclick=fecharCamera;
+
 function fecharCamera(){
  Quagga.stop();
  camera.style.display="none";
- btnOpenCamera.classList.remove("hidden");
- btnCloseCamera.classList.add("hidden");
 }
-btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ===== ENVIAR ===== */
 btnEnviar.onclick=async()=>{
- if(enviando||!produto.value||!quantidade.value)return;
- enviando=true;
- btnEnviar.classList.add("loading");
+ if(!produto.value||!quantidade.value)return;
  await sb.from("requisicoes").insert({
   usuario:usuarioLogado,
-  setor:setorEl.value,
+  setor:setor.value,
   produto:produto.value,
   unidade:unidadeAuto,
   quantidade:quantidade.value,
@@ -333,37 +283,25 @@ btnEnviar.onclick=async()=>{
   barcode:barcodeFinal,
   status:"PENDENTE"
  });
- btnEnviar.classList.remove("loading");
- enviando=false;
  produto.value="";quantidade.value="";observacoes.value="";unidadeBox.innerHTML="";
  carregarHistorico();
 };
 
-/* ===== HISTÓRICO ===== */
 async function carregarHistorico(){
  historico.innerHTML="";
  const seteDias=new Date(Date.now()-7*86400000).toISOString();
  const {data}=await sb.from("requisicoes")
- .select("*")
- .eq("usuario",usuarioLogado)
- .gte("created_at",seteDias)
- .order("created_at",{ascending:false});
+ .select("*").eq("usuario",usuarioLogado)
+ .gte("created_at",seteDias).order("created_at",{ascending:false});
  (data||[]).forEach(r=>{
-  const horas=(Date.now()-new Date(r.created_at))/3600000;
-  historico.insertAdjacentHTML("beforeend",`
-   <tr id="row-${r.id}">
+  historico.innerHTML+=`
+   <tr>
     <td>${r.produto}</td>
     <td>${r.quantidade}</td>
+    <td>${r.unidade}</td>
     <td>${r.status}</td>
-    <td>${horas<=1?`<button class="btn-delete" onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
-   </tr>`);
+   </tr>`;
  });
-}
-
-/* ===== EXCLUIR ===== */
-async function excluir(id){
- const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
- if(data) document.getElementById("row-"+id)?.remove();
 }
 </script>
 </body>
