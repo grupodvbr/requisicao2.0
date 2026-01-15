@@ -430,7 +430,14 @@ buscaProdutoId.onchange = async () => {
   const id = buscaProdutoId.value;
   if (!id) return;
 
-  const r = await fetch(`/api/buscar-id?id=${id}`)
+  // 🔐 pega token do localStorage ou de onde você já usa
+  const token = localStorage.getItem("vf_token");
+
+  const r = await fetch(`/api/buscar-id?id=${id}`, {
+    headers: {
+      Authorization: token
+    }
+  });
 
   const j = await r.json();
 
@@ -441,6 +448,7 @@ buscaProdutoId.onchange = async () => {
     unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
   }
 };
+
 
 </script>
 </body>
