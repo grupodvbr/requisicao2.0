@@ -2,6 +2,288 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Requisições • Mercatto</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --azul:#007bff;
+  --verde:#28a745;
+  --vermelho:#dc3545;
+  --amarelo:#ffc107;
+  --roxo:#6f42c1;
+  --cinza:#f1f1f1;
+  --bg:#fff;
+  --ink:#222;
+}
+body.dark{
+  --bg:#121212;
+  --cinza:#1e1e1e;
+  --ink:#eee;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:var(--cinza);
+  color:var(--ink);
+}
+
+/* HEADER */
+header{
+  position:sticky;
+  top:0;
+  z-index:30;
+  background:var(--bg);
+  border-bottom:2px solid var(--cinza);
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+header h1{margin:0;font-size:1.2em}
+
+/* RESUMO */
+.resumo{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px;
+  background:var(--bg);
+}
+.card{
+  padding:8px 12px;
+  border-radius:8px;
+  font-weight:bold;
+  font-size:13px;
+  display:flex;
+  gap:6px;
+}
+.card span{
+  background:rgba(255,255,255,.7);
+  padding:2px 8px;
+  border-radius:6px;
+}
+
+/* FILTROS */
+.filtros{
+  position:sticky;
+  top:60px;
+  z-index:20;
+  background:var(--bg);
+  padding:10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.filtros input,.filtros select{
+  padding:6px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:13px;
+}
+
+/* TABELA */
+table{
+  width:100%;
+  border-collapse:collapse;
+  background:var(--bg);
+  font-size:13px;
+}
+thead{
+  background:var(--azul);
+  color:#fff;
+  position:sticky;
+  top:120px;
+}
+th,td{
+  padding:8px;
+  border:1px solid #ddd;
+  text-align:center;
+}
+td[colspan]{
+  background:#e3eaf3;
+  font-weight:bold;
+  text-align:left;
+}
+
+/* STATUS */
+select.status{
+  padding:4px;
+  border-radius:5px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>📋 Requisições Mercatto</h1>
+  <button onclick="toggleTema()">🌙</button>
+</header>
+
+<div class="resumo">
+  <div class="card" style="background:#f9f9f9">🕓 PENDENTE <span id="cP">0</span></div>
+  <div class="card" style="background:#d1ecf1">🛒 CARRINHO <span id="cC">0</span></div>
+  <div class="card" style="background:#fff3cd">💰 COMPRADO <span id="cCO">0</span></div>
+  <div class="card" style="background:#f8d7da">❌ NEGADO <span id="cN">0</span></div>
+  <div class="card" style="background:#d4edda">✅ ENTREGUE <span id="cE">0</span></div>
+  <div class="card" style="background:#ede7f6">🚫 SEM ESTOQUE <span id="cSE">0</span></div>
+</div>
+
+<div class="filtros">
+  <input type="date" id="dataInicio">
+  <input type="date" id="dataFim">
+  <input type="text" id="fItem" placeholder="Item / Obs">
+  <select id="fStatus">
+    <option value="PENDENTE" selected>PENDENTE</option>
+    <option value="TODOS">TODOS</option>
+    <option>NO CARRINHO</option>
+    <option>COMPRADO</option>
+    <option>NEGADO</option>
+    <option>ENTREGUE</option>
+    <option>SEM ESTOQUE</option>
+  </select>
+  <select id="fSetor"></select>
+  <select id="fUsuario"></select>
+  <select id="fModo">
+    <option value="setor">Exibir por Setor</option>
+    <option value="usuario">Exibir por Solicitante</option>
+  </select>
+</div>
+
+<table>
+<thead>
+<tr>
+  <th>Data</th><th>Item</th><th>Qtd</th><th>Un</th>
+  <th>Setor</th><th>Solicitante</th><th>Obs</th><th>Status</th>
+</tr>
+</thead>
+<tbody id="tabela"></tbody>
+</table>
+
+<script>
+/* ===== SUPABASE ===== */
+const sb=supabase.createClient(
+ "https://mybsriouiwqsdufujbsc.supabase.co",
+ "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
+);
+
+let dados=[];
+
+/* TEMA */
+function toggleTema(){
+ document.body.classList.toggle("dark");
+ localStorage.setItem("tema",document.body.classList.contains("dark")?"dark":"light");
+}
+if(localStorage.getItem("tema")==="dark") document.body.classList.add("dark");
+
+/* LOAD */
+async function carregar(){
+ const {data,error}=await sb.from("requisicoes")
+  .select("*")
+  .order("created_at",{ascending:false});
+ if(error){alert(error.message);return;}
+ dados=data||[];
+ preencherFiltros();
+ filtrar();
+}
+
+/* FILTROS */
+function preencherFiltros(){
+ fSetor.innerHTML='<option value="">Todos Setores</option>';
+ [...new Set(dados.map(d=>d.setor).filter(Boolean))]
+  .forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
+
+ fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
+ [...new Set(dados.map(d=>d.usuario).filter(Boolean))]
+  .forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
+}
+[dataInicio,dataFim,fItem,fStatus,fSetor,fUsuario,fModo].forEach(e=>e.oninput=filtrar);
+
+/* FILTRAR */
+function filtrar(){
+ let lista=[...dados];
+ const fs=fStatus.value;
+ if(fs!=="TODOS"){
+  lista=lista.filter(r=>{
+   const s=(r.status||"PENDENTE").toUpperCase();
+   return fs==="PENDENTE"
+    ? !["NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"].includes(s)
+    : s===fs;
+  });
+ }
+ if(fSetor.value) lista=lista.filter(r=>r.setor===fSetor.value);
+ if(fUsuario.value) lista=lista.filter(r=>r.usuario===fUsuario.value);
+ if(fItem.value){
+  const t=fItem.value.toLowerCase();
+  lista=lista.filter(r=>r.produto.toLowerCase().includes(t)||(r.observacoes||"").toLowerCase().includes(t));
+ }
+ render(lista);
+}
+
+/* RENDER */
+function render(lista){
+ const t=tabela; t.innerHTML="";
+ const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
+
+ const grupos={};
+ lista.forEach(r=>{
+  const k=fModo.value==="setor"?r.setor:r.usuario;
+  if(!grupos[k]) grupos[k]=[];
+  grupos[k].push(r);
+  c[(r.status||"PENDENTE").toUpperCase()]++;
+ });
+
+ for(const g in grupos){
+  t.insertAdjacentHTML("beforeend",`<tr><td colspan="8">${fModo.value==="setor"?"Setor":"Solicitante"}: ${g}</td></tr>`);
+  grupos[g].forEach(r=>{
+   t.insertAdjacentHTML("beforeend",`
+    <tr>
+     <td>${new Date(r.created_at).toLocaleString()}</td>
+     <td>${r.produto}</td>
+     <td>${r.quantidade}</td>
+     <td>${r.unidade}</td>
+     <td>${r.setor}</td>
+     <td>${r.usuario}</td>
+     <td>${r.observacoes||""}</td>
+     <td>
+      <select class="status" onchange="mudarStatus('${r.id}',this.value)">
+       ${Object.keys(c).map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+      </select>
+     </td>
+    </tr>`);
+  });
+ }
+
+ cP.textContent=c.PENDENTE||0;
+ cC.textContent=c["NO CARRINHO"]||0;
+ cCO.textContent=c.COMPRADO||0;
+ cN.textContent=c.NEGADO||0;
+ cE.textContent=c.ENTREGUE||0;
+ cSE.textContent=c["SEM ESTOQUE"]||0;
+}
+
+/* STATUS */
+async function mudarStatus(id,status){
+ const {error}=await sb.from("requisicoes").update({status}).eq("id",id);
+ if(error){alert(error.message);return;}
+ const r=dados.find(d=>d.id===id);
+ r.status=status;
+ filtrar();
+}
+
+carregar();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
 <title>Painel de Requisições • Delícia Gourmet</title>
 
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
