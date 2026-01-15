@@ -4,22 +4,23 @@
 <meta charset="UTF-8">
 <title>Painel de Requisições • Delícia Gourmet</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
   --bg:#f4f6f8;
-  --card:#fff;
-  --ink:#111;
+  --card:#ffffff;
+  --ink:#0f172a;
   --primary:#2563eb;
   --success:#16a34a;
   --danger:#dc2626;
   --warn:#f59e0b;
 }
 body.dark{
-  --bg:#0f172a;
+  --bg:#020617;
   --card:#020617;
   --ink:#e5e7eb;
 }
@@ -30,6 +31,7 @@ body{
   background:var(--bg);
   color:var(--ink);
 }
+
 header{
   display:flex;
   justify-content:space-between;
@@ -39,24 +41,19 @@ header{
   border-bottom:1px solid #e5e7eb;
   position:sticky;
   top:0;
-  z-index:20;
+  z-index:10;
 }
-header h1{
-  font-size:18px;
-  margin:0;
-  font-weight:800;
-}
+header h1{margin:0;font-size:18px;font-weight:800}
 header button{
   border:none;
   background:var(--primary);
   color:#fff;
   padding:8px 14px;
   border-radius:10px;
-  cursor:pointer;
   font-weight:700;
+  cursor:pointer;
 }
 
-/* ===== RESUMO ===== */
 .resumo{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
@@ -67,30 +64,27 @@ header button{
   background:var(--card);
   padding:12px;
   border-radius:14px;
-  font-weight:800;
   display:flex;
   justify-content:space-between;
+  font-weight:800;
 }
 
-/* ===== FILTROS ===== */
 .filtros{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
   gap:10px;
   padding:14px;
   background:var(--card);
   position:sticky;
   top:64px;
-  z-index:10;
+  z-index:9;
 }
 .filtros input,.filtros select{
   padding:10px;
   border-radius:10px;
   border:1px solid #cbd5e1;
-  font-size:13px;
 }
 
-/* ===== TABELA ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -105,36 +99,25 @@ thead{
 th,td{
   padding:8px;
   border:1px solid #e5e7eb;
-  text-align:center;
   font-size:13px;
+  text-align:center;
 }
+
 select.status{
   padding:6px;
   border-radius:8px;
 }
 
-/* ===== BOTÕES ===== */
-.btn-entregue{
-  background:var(--success);
-  color:#fff;
-  border:none;
+.btn{
   padding:6px 10px;
   border-radius:8px;
+  border:none;
   cursor:pointer;
   font-weight:700;
 }
-.btn-massa{
-  margin:14px;
-  background:var(--success);
-  color:#fff;
-  border:none;
-  padding:12px;
-  border-radius:12px;
-  font-weight:800;
-  cursor:pointer;
-}
+.btn-entregue{background:var(--success);color:#fff}
+.btn-editar{background:var(--warn);color:#000}
 
-/* ===== UTIL ===== */
 .hidden{display:none}
 </style>
 </head>
@@ -147,11 +130,8 @@ select.status{
 </header>
 
 <div class="resumo">
-  <div class="card">🕓 PENDENTE <span id="cP">0</span></div>
-  <div class="card">🛒 CARRINHO <span id="cC">0</span></div>
-  <div class="card">💰 COMPRADO <span id="cCo">0</span></div>
-  <div class="card">❌ NEGADO <span id="cN">0</span></div>
-  <div class="card">✅ ENTREGUE <span id="cE">0</span></div>
+  <div class="card">PENDENTE <span id="cP">0</span></div>
+  <div class="card">ENTREGUE <span id="cE">0</span></div>
 </div>
 
 <div class="filtros">
@@ -159,44 +139,38 @@ select.status{
   <input type="date" id="fFim">
   <input type="text" id="fItem" placeholder="Item / Obs">
   <select id="fStatus">
-    <option value="">Todos</option>
-    <option>PENDENTE</option>
-    <option>NO CARRINHO</option>
-    <option>COMPRADO</option>
-    <option>NEGADO</option>
-    <option>ENTREGUE</option>
+    <option value="PENDENTE">PENDENTE</option>
+    <option value="">TODOS</option>
+    <option value="ENTREGUE">ENTREGUE</option>
   </select>
   <select id="fSetor"></select>
   <select id="fUsuario"></select>
 </div>
 
-<button class="btn-massa" onclick="marcarEntregueMassa()">📦 Marcar todos como ENTREGUE</button>
-
 <table>
 <thead>
 <tr>
 <th>Data</th><th>Produto</th><th>Qtd</th><th>Un</th>
-<th>Setor</th><th>Solicitante</th><th>Obs</th><th>Status</th>
+<th>Setor</th><th>Solicitante</th><th>Obs</th><th>Ações</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
 
 <script>
-/* ===== SUPABASE ===== */
 const sb = supabase.createClient(
   "https://mybsriouiwqsdufujbsc.supabase.co",
   "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
+const listaEl = document.getElementById("lista");
+
 let dados=[];
 
-/* ===== TEMA ===== */
 function toggleTema(){
   document.body.classList.toggle("dark");
 }
 
-/* ===== LOAD ===== */
 async function carregar(){
   const {data} = await sb
     .from("requisicoes")
@@ -208,7 +182,6 @@ async function carregar(){
   filtrar();
 }
 
-/* ===== FILTROS ===== */
 function preencherFiltros(){
   fSetor.innerHTML='<option value="">Todos Setores</option>';
   [...new Set(dados.map(d=>d.setor))].forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
@@ -219,26 +192,28 @@ function preencherFiltros(){
 
 [fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
 
-/* ===== FILTRAR ===== */
 function filtrar(){
-  let listaFiltrada=[...dados];
-  if(fStatus.value) listaFiltrada=listaFiltrada.filter(d=>d.status===fStatus.value);
-  if(fSetor.value) listaFiltrada=listaFiltrada.filter(d=>d.setor===fSetor.value);
-  if(fUsuario.value) listaFiltrada=listaFiltrada.filter(d=>d.usuario===fUsuario.value);
-  if(fItem.value) listaFiltrada=listaFiltrada.filter(d=>
-    d.produto.toLowerCase().includes(fItem.value.toLowerCase()) ||
-    (d.observacoes||"").toLowerCase().includes(fItem.value.toLowerCase())
-  );
-  render(listaFiltrada);
+  let lista=[...dados];
+
+  if(fStatus.value) lista=lista.filter(d=>d.status===fStatus.value);
+  if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
+  if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
+  if(fItem.value){
+    const t=fItem.value.toLowerCase();
+    lista=lista.filter(d=>d.produto.toLowerCase().includes(t)||(d.observacoes||"").toLowerCase().includes(t));
+  }
+
+  render(lista);
 }
 
-/* ===== RENDER ===== */
 function render(lista){
   listaEl.innerHTML="";
-  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0};
+  let cP=0,cE=0;
 
   lista.forEach(r=>{
-    c[r.status]=(c[r.status]||0)+1;
+    if(r.status==="PENDENTE") cP++;
+    if(r.status==="ENTREGUE") cE++;
+
     listaEl.innerHTML+=`
     <tr>
       <td>${new Date(r.created_at).toLocaleString()}</td>
@@ -249,39 +224,24 @@ function render(lista){
       <td>${r.usuario}</td>
       <td>${r.observacoes||""}</td>
       <td>
-        <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
-          ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE"].map(s=>
-            `<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
-        </select>
+        <button class="btn btn-entregue" onclick="entregar('${r.id}')">ENTREGUE</button>
       </td>
     </tr>`;
   });
 
-  cP.textContent=c.PENDENTE||0;
-  cC.textContent=c["NO CARRINHO"]||0;
-  cCo.textContent=c.COMPRADO||0;
-  cN.textContent=c.NEGADO||0;
-  cE.textContent=c.ENTREGUE||0;
+  document.getElementById("cP").textContent=cP;
+  document.getElementById("cE").textContent=cE;
 }
 
-/* ===== STATUS ===== */
-async function atualizarStatus(id,status){
-  await sb.from("requisicoes").update({status}).eq("id",id);
+async function entregar(id){
+  await sb.from("requisicoes").update({status:"ENTREGUE"}).eq("id",id);
   const r=dados.find(d=>d.id===id);
-  if(r) r.status=status;
-}
-
-/* ===== MASSA ===== */
-async function marcarEntregueMassa(){
-  if(!confirm("Marcar todos filtrados como ENTREGUE?"))return;
-  for(const r of dados.filter(d=>d.status!=="ENTREGUE")){
-    await sb.from("requisicoes").update({status:"ENTREGUE"}).eq("id",r.id);
-    r.status="ENTREGUE";
-  }
+  if(r) r.status="ENTREGUE";
   filtrar();
 }
 
 carregar();
 </script>
+
 </body>
 </html>
