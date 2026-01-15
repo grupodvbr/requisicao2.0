@@ -15,7 +15,6 @@
   --bg:#f4f6f8;
   --card:#ffffff;
   --ink:#0f172a;
-  --muted:#64748b;
   --primary:#2563eb;
   --success:#16a34a;
   --danger:#dc2626;
@@ -46,8 +45,8 @@ header{
 header h1{margin:0;font-size:18px;font-weight:800}
 header button{
   border:none;
-  background:var(--primary);
-  color:#fff;
+  background:#fee2e2;
+  color:#991b1b;
   padding:6px 12px;
   border-radius:999px;
   font-size:12px;
@@ -83,24 +82,6 @@ header button{
 .c-entregue{background:var(--success)}
 .c-se{background:var(--gray)}
 
-/* FILTROS */
-.filtros{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:10px;
-  padding:14px;
-  background:var(--card);
-  position:sticky;
-  top:64px;
-  z-index:20;
-}
-.filtros input,.filtros select{
-  padding:10px;
-  border-radius:10px;
-  border:1px solid #cbd5e1;
-  font-size:13px;
-}
-
 /* TABELA */
 table{
   width:100%;
@@ -110,9 +91,6 @@ table{
 thead{
   background:var(--primary);
   color:#fff;
-  position:sticky;
-  top:150px;
-  z-index:15;
 }
 th,td{
   padding:8px;
@@ -125,7 +103,6 @@ th,td{
   font-weight:800;
   cursor:pointer;
   user-select:none;
-  -webkit-user-select:none;
 }
 
 select.status{
@@ -157,7 +134,6 @@ select.status{
   padding:12px;
   border-radius:10px;
   border:1px solid #cbd5e1;
-  margin-bottom:10px;
 }
 .modal-box button{
   width:100%;
@@ -165,7 +141,7 @@ select.status{
   border-radius:10px;
   border:none;
   font-weight:800;
-  margin-top:6px;
+  margin-top:8px;
 }
 .btn-primary{background:var(--primary);color:#fff}
 .btn-muted{background:#e5e7eb}
@@ -176,6 +152,7 @@ select.status{
   background:#000;
   border-radius:12px;
   display:none;
+  margin-top:10px;
 }
 #codigoLido{
   text-align:center;
@@ -190,7 +167,7 @@ select.status{
 
 <header>
   <h1>📋 Painel de Requisições</h1>
-  <button onclick="document.body.classList.toggle('dark')">🌙 Tema</button>
+  <button onclick="logout()">Sair</button>
 </header>
 
 <div class="resumo">
@@ -202,23 +179,6 @@ select.status{
   <div class="card c-se">SEM ESTOQUE <span id="cSE">0</span></div>
 </div>
 
-<div class="filtros">
-  <input type="date" id="fInicio">
-  <input type="date" id="fFim">
-  <input type="text" id="fItem" placeholder="Item / Observação">
-  <select id="fStatus">
-    <option value="PENDENTE" selected>PENDENTE</option>
-    <option value="">TODOS</option>
-    <option>NO CARRINHO</option>
-    <option>COMPRADO</option>
-    <option>NEGADO</option>
-    <option>ENTREGUE</option>
-    <option>SEM ESTOQUE</option>
-  </select>
-  <select id="fSetor"></select>
-  <select id="fUsuario"></select>
-</div>
-
 <table>
 <thead>
 <tr>
@@ -226,16 +186,13 @@ select.status{
   <th>Produto</th>
   <th>Qtd</th>
   <th>Un</th>
-  <th>Setor</th>
-  <th>Solicitante</th>
-  <th>Obs</th>
   <th>Status</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
 
-<!-- MODAL -->
+<!-- MODAL PRODUTO -->
 <div class="modal" id="modalProduto">
   <div class="modal-box">
     <h3>Alterar produto</h3>
@@ -261,46 +218,23 @@ const sb=supabase.createClient(
 const listaEl=document.getElementById("lista");
 let dados=[],editandoId=null;
 
+const normalizar=c=>"0"+String(c).replace(/\D/g,"");
+
 /* LOAD */
 async function carregar(){
- const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
+ const {data,error}=await sb.from("requisicoes")
+ .select("*")
+ .order("created_at",{ascending:false});
+ if(error){alert(error.message);return;}
  dados=data||[];
- preencherFiltros();
- filtrar();
-}
-
-/* FILTROS */
-function preencherFiltros(){
- fSetor.innerHTML='<option value="">Todos Setores</option>';
- fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
- [...new Set(dados.map(d=>d.setor))].forEach(s=>s&&(fSetor.innerHTML+=`<option>${s}</option>`));
- [...new Set(dados.map(d=>d.usuario))].forEach(u=>u&&(fUsuario.innerHTML+=`<option>${u}</option>`));
-}
-
-[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
-
-/* FILTRAR */
-function filtrar(){
- let lista=[...dados];
- if(!fInicio.value&&!fFim.value&&fStatus.value==="PENDENTE"){
-   lista=lista.filter(d=>d.status==="PENDENTE");
- }
- if(fStatus.value&&fStatus.value!=="PENDENTE")
-   lista=lista.filter(d=>d.status===fStatus.value);
- if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
- if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
- if(fItem.value){
-  const t=fItem.value.toLowerCase();
-  lista=lista.filter(d=>d.produto.toLowerCase().includes(t)||(d.observacoes||"").toLowerCase().includes(t));
- }
- render(lista);
+ render();
 }
 
 /* RENDER */
-function render(lista){
+function render(){
  listaEl.innerHTML="";
  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
- lista.forEach(r=>{
+ dados.forEach(r=>{
   c[r.status]++;
   listaEl.innerHTML+=`
   <tr>
@@ -308,9 +242,6 @@ function render(lista){
     <td class="editavel" ondblclick="editarProduto('${r.id}')">${r.produto}</td>
     <td class="editavel" ondblclick="editarQtd('${r.id}')">${r.quantidade}</td>
     <td>${r.unidade}</td>
-    <td>${r.setor}</td>
-    <td>${r.usuario}</td>
-    <td>${r.observacoes||""}</td>
     <td>
       <select class="status" onchange="mudarStatus('${r.id}',this.value)">
         ${Object.keys(c).map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
@@ -328,10 +259,11 @@ function render(lista){
 
 /* STATUS */
 async function mudarStatus(id,status){
- await sb.from("requisicoes").update({status}).eq("id",id);
+ const {error}=await sb.from("requisicoes").update({status}).eq("id",id);
+ if(error){alert(error.message);return;}
  const r=dados.find(d=>d.id===id);
  r.status=status;
- filtrar();
+ render();
 }
 
 /* PRODUTO */
@@ -356,7 +288,7 @@ function abrirCamera(){
  },()=>Quagga.start());
 
  Quagga.onDetected(r=>{
-  const code="0"+r.codeResult.code.replace(/\D/g,"");
+  const code=normalizar(r.codeResult.code);
   novoBarcode.value=code;
   codigoLido.textContent=code;
   confirmarProduto();
@@ -365,16 +297,17 @@ function abrirCamera(){
 
 async function confirmarProduto(){
  if(!novoBarcode.value) return;
-
  const r=await fetch(`/api/buscar-barcode?barcode=${novoBarcode.value}`);
  const j=await r.json();
- if(!j || !j.produto) return;
+ if(!j?.produto){alert("Produto não encontrado");return;}
 
- await sb.from("requisicoes").update({
+ const {error}=await sb.from("requisicoes").update({
   produto:j.produto.descricao,
   unidade:j.produto.unidadeDeVenda,
   barcode:novoBarcode.value
  }).eq("id",editandoId);
+
+ if(error){alert(error.message);return;}
 
  document.getElementById("beep").play();
  fecharModal();
@@ -384,14 +317,20 @@ async function confirmarProduto(){
 /* QTD */
 function editarQtd(id){
  const r=dados.find(d=>d.id===id);
- const decimal=/KG|L|LT/i.test(r.unidade);
+ const decimal=/KG|L/i.test(r.unidade);
  const v=prompt("Nova quantidade:",r.quantidade);
- if(v===null) return;
+ if(v===null)return;
  const n=decimal?parseFloat(v):parseInt(v);
- if(isNaN(n)) return;
+ if(isNaN(n))return;
  sb.from("requisicoes").update({quantidade:n}).eq("id",id);
  r.quantidade=n;
- filtrar();
+ render();
+}
+
+/* LOGOUT */
+function logout(){
+ localStorage.clear();
+ location.reload();
 }
 
 carregar();
