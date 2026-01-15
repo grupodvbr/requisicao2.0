@@ -11,7 +11,7 @@ maximum-scale=1.0,
 user-scalable=no,
 viewport-fit=cover">
 
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#1e40af">
 <link rel="manifest" href="/manifest.json">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -27,29 +27,50 @@ html,body{
 }
 body{
   font-family:Inter,Arial,sans-serif;
-  background:#f4f6f8;
+  background:linear-gradient(180deg,#eef2ff,#f8fafc);
   display:flex;
   justify-content:center;
   padding:14px;
 }
+
+/* ===== CONTAINER ===== */
 .container{
   background:#fff;
-  border-radius:22px;
-  box-shadow:0 18px 45px rgba(0,0,0,.12);
+  border-radius:26px;
+  box-shadow:0 25px 60px rgba(0,0,0,.15);
   max-width:520px;
   width:100%;
   padding:22px;
+  position:relative;
+}
+
+/* ===== HEADER ===== */
+h2{
+  text-align:center;
+  font-weight:800;
+  margin:8px 0 18px;
+  color:#0f172a;
 }
 
 /* ===== FORMS ===== */
-label{font-weight:700;margin-top:14px;display:block}
+label{
+  font-weight:700;
+  margin-top:14px;
+  display:block;
+  color:#0f172a;
+}
 input,select,textarea{
   width:100%;
   padding:14px;
   margin-top:6px;
   border:1px solid #cbd5e1;
-  border-radius:14px;
+  border-radius:16px;
   font-size:15px;
+  background:#fff;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;
+  border-color:#2563eb;
 }
 input[readonly]{background:#f1f5f9}
 textarea{min-height:80px;resize:none}
@@ -60,7 +81,7 @@ button{
   padding:14px;
   margin-top:12px;
   border:none;
-  border-radius:16px;
+  border-radius:18px;
   font-weight:800;
   font-size:15px;
   cursor:pointer;
@@ -68,17 +89,17 @@ button{
   overflow:hidden;
 }
 .btn-primary{background:#2563eb;color:#fff}
-.btn-muted{background:#e5e7eb;color:#111}
 .btn-dark{background:#0f172a;color:#fff}
+.btn-muted{background:#e5e7eb;color:#0f172a}
 .btn-danger{background:#fee2e2;color:#991b1b}
 
-/* ===== BOTÃO ENVIAR OVERLAY ===== */
-.btn-primary.loading{
+/* ===== OVERLAY NO BOTÃO ===== */
+button.loading{
   pointer-events:none;
-  opacity:.85;
+  opacity:.9;
 }
-.btn-primary.loading::after{
-  content:"Enviando...";
+button.loading::after{
+  content:"Processando…";
   position:absolute;
   inset:0;
   background:rgba(0,0,0,.25);
@@ -86,7 +107,6 @@ button{
   align-items:center;
   justify-content:center;
   font-weight:800;
-  font-size:15px;
 }
 
 /* ===== CAMERA ===== */
@@ -95,11 +115,63 @@ button{
   width:100%;
   height:260px;
   background:#000;
-  border-radius:18px;
-  margin-top:10px;
+  border-radius:20px;
+  margin-top:12px;
   overflow:hidden;
 }
-#camera video{width:100%;height:100%;object-fit:cover}
+#camera video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* ===== BADGE ===== */
+.badge{
+  display:inline-block;
+  background:#e0f2fe;
+  color:#0369a1;
+  padding:8px 18px;
+  border-radius:999px;
+  font-weight:800;
+  margin-top:10px;
+  font-size:13px;
+}
+
+/* ===== PROFILE ===== */
+.profile{
+  display:flex;
+  justify-content:center;
+  margin-bottom:14px;
+}
+.profile-name{
+  background:#f1f5f9;
+  padding:10px 18px;
+  border-radius:999px;
+  font-weight:800;
+  cursor:pointer;
+  color:#0f172a;
+}
+.profile-menu{
+  display:none;
+  position:absolute;
+  top:72px;
+  right:22px;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 20px 40px rgba(0,0,0,.2);
+  overflow:hidden;
+}
+.profile-menu button{
+  background:none;
+  border:none;
+  padding:14px 20px;
+  font-weight:800;
+  cursor:pointer;
+  text-align:left;
+}
+.profile-menu button:hover{
+  background:#f1f5f9;
+}
 
 /* ===== TABLE ===== */
 table{
@@ -113,51 +185,36 @@ th,td{
   padding:8px;
   text-align:center;
 }
-th{background:#f1f5f9;font-weight:800}
-
-/* ===== DELETE ===== */
+th{
+  background:#f1f5f9;
+  font-weight:800;
+}
 .action-delete{
   background:#fee2e2;
   color:#991b1b;
   border:none;
-  border-radius:10px;
+  border-radius:12px;
   padding:6px 12px;
   font-weight:800;
   cursor:pointer;
-  position:relative;
 }
 .action-delete.loading{
   pointer-events:none;
   opacity:.6;
 }
-.action-delete.loading::after{
-  content:"...";
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
 
 /* ===== UTIL ===== */
 .hidden{display:none}
-.badge{
-  display:inline-block;
-  background:#e0f2fe;
-  color:#0369a1;
-  padding:8px 16px;
-  border-radius:999px;
-  font-weight:800;
-  margin-top:8px;
-  font-size:13px;
-}
 </style>
 </head>
 
 <body>
 <div class="container">
 
-<h2 style="text-align:center;font-weight:800">📋 Requisição de Compras</h2>
+<h2>📋 Requisição de Compras</h2>
+
+<!-- PERFIL -->
+<div id="profileArea"></div>
 
 <!-- LOGIN -->
 <div id="loginArea">
@@ -180,7 +237,7 @@ th{background:#f1f5f9;font-weight:800}
 </select>
 
 <label>Código de Barras</label>
-<input id="barcode">
+<input id="barcode" placeholder="Digite ou escaneie">
 
 <button class="btn-muted" id="btnManual">Buscar manual</button>
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
@@ -201,7 +258,8 @@ th{background:#f1f5f9;font-weight:800}
 
 <button class="btn-primary" id="btnEnviar">Enviar requisição</button>
 
-<h3>Histórico (7 dias)</h3>
+<h3 style="margin-top:18px">Histórico (7 dias)</h3>
+
 <table>
 <thead>
 <tr>
@@ -243,6 +301,7 @@ btnLogin.onclick = async ()=>{
     .single();
 
   if(!data) return alert("Usuário ou senha inválidos");
+
   localStorage.setItem("usuario",JSON.stringify(data.usuario));
   location.reload();
 };
@@ -251,7 +310,22 @@ btnLogin.onclick = async ()=>{
 if(usuarioLogado){
   loginArea.classList.add("hidden");
   appArea.classList.remove("hidden");
+  profileArea.innerHTML=`
+    <div class="profile">
+      <div class="profile-name" onclick="toggleMenu()">👤 ${usuarioLogado}</div>
+      <div class="profile-menu" id="menuPerfil">
+        <button onclick="logout()">Sair</button>
+      </div>
+    </div>`;
   carregarHistorico();
+}
+function toggleMenu(){
+  const m=document.getElementById("menuPerfil");
+  m.style.display=m.style.display==="block"?"none":"block";
+}
+function logout(){
+  localStorage.removeItem("usuario");
+  location.reload();
 }
 
 /* ===== BARCODE ===== */
@@ -297,7 +371,7 @@ btnCloseCamera.onclick=fecharCamera;
 /* ===== MANUAL ===== */
 btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ===== ENVIO COM OVERLAY ===== */
+/* ===== ENVIAR ===== */
 btnEnviar.onclick=async()=>{
   if(enviando) return;
   if(!setor.value||!produto.value||!quantidade.value) return alert("Preencha tudo");
@@ -320,9 +394,8 @@ btnEnviar.onclick=async()=>{
   enviando=false;
 
   limparCampos();
-  historico.insertAdjacentHTML("afterbegin",""); 
-  page=0;
   historico.innerHTML="";
+  page=0;
   carregarHistorico();
 };
 
@@ -354,7 +427,7 @@ async function carregarHistorico(){
     `);
   });
 
-  btnMais.classList.toggle("hidden", data.length!==limit);
+  btnMais.classList.toggle("hidden",data.length!==limit);
   page++;
 }
 btnMais.onclick=carregarHistorico;
