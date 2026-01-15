@@ -344,7 +344,7 @@ function fecharPopupProduto(){
  Quagga.stop();
 }
 async function buscarProdutoManual(){
- buscarProduto(novoCodigo.value);
+buscarProduto(normalizarCodigo(novoCodigo.value));
 }
 async function buscarProduto(code){
  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
@@ -368,7 +368,10 @@ function abrirCamera(){
   inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
   decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
  },()=>Quagga.start());
- Quagga.onDetected(r=>buscarProduto(r.codeResult.code));
+Quagga.onDetected(r=>{
+  const code = normalizarCodigo(r.codeResult.code);
+  buscarProduto(code);
+});
 }
 
 /* QTD */
@@ -383,6 +386,10 @@ function editarQuantidade(id){
  r.quantidade=q;
  filtrar();
 }
+function normalizarCodigo(codigo){
+  return "0" + String(codigo).replace(/\D/g,"");
+}
+
 </script>
 
 </body>
