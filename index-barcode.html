@@ -3,59 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <title>Requisição de Compras – DELÍCIA GOURMET</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
+*{box-sizing:border-box}
 body{
-  font-family:Inter, Arial, sans-serif;
+  margin:0;
+  font-family:Inter,Arial;
   background:#f4f6f8;
   display:flex;
   justify-content:center;
-  padding:20px;
+  padding:16px;
 }
 .container{
   background:#fff;
-  border-radius:14px;
-  box-shadow:0 10px 25px rgba(0,0,0,.12);
+  border-radius:18px;
+  box-shadow:0 12px 30px rgba(0,0,0,.12);
   max-width:520px;
   width:100%;
-  padding:24px;
+  padding:22px;
+  position:relative;
 }
-h2{text-align:center;margin-bottom:18px}
-label{font-weight:600;margin-top:12px;display:block}
+h2{text-align:center;margin:6px 0 18px;font-weight:800}
+
+label{font-weight:700;margin-top:12px;display:block}
 input,select,textarea{
   width:100%;
-  padding:12px;
+  padding:14px;
   margin-top:6px;
   border:1px solid #cbd5e1;
-  border-radius:8px;
+  border-radius:10px;
   font-size:15px;
 }
 input[readonly]{background:#f1f5f9}
 textarea{min-height:70px}
+
 button{
   width:100%;
   padding:14px;
   margin-top:10px;
   border:none;
-  border-radius:10px;
-  font-weight:700;
+  border-radius:12px;
+  font-weight:800;
   font-size:15px;
   cursor:pointer;
 }
 .btn-primary{background:#2563eb;color:#fff}
 .btn-dark{background:#0f172a;color:#fff}
-.btn-success{background:#16a34a;color:#fff}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-muted{background:#e5e7eb;color:#111}
 
 #camera{
   width:100%;
   height:260px;
   background:#000;
-  border-radius:12px;
+  border-radius:14px;
   margin-top:10px;
   overflow:hidden;
 }
@@ -71,39 +79,82 @@ button{
   color:#0369a1;
   padding:6px 14px;
   border-radius:999px;
-  font-weight:700;
-  margin-top:6px;
+  font-weight:800;
+  margin-top:8px;
   font-size:13px;
+}
+
+.userbox{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#f1f5f9;
+  padding:10px 14px;
+  border-radius:12px;
+  font-weight:800;
+  margin-bottom:10px;
+}
+
+.overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(255,255,255,.85);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  font-size:18px;
+  z-index:50;
 }
 
 .alert{
   background:#dcfce7;
   color:#166534;
-  padding:10px;
-  border-radius:8px;
+  padding:12px;
+  border-radius:12px;
   text-align:center;
-  font-weight:700;
-  margin-top:10px;
+  font-weight:800;
+  margin-top:12px;
   display:none;
 }
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:14px;
+  font-size:13px;
+}
+th,td{
+  border:1px solid #e5e7eb;
+  padding:6px;
+  text-align:center;
+}
+th{background:#f1f5f9}
 </style>
 </head>
 
 <body>
 <div class="container">
 
+<div class="overlay" id="overlay">Enviando...</div>
+
 <h2>📋 Requisição de Compras</h2>
 
+<!-- USUÁRIO LOGADO -->
+<div id="userArea"></div>
+
 <!-- LOGIN -->
-<label>Usuário</label>
-<input id="usuario">
+<div id="loginArea">
+  <label>Usuário</label>
+  <input id="usuario">
 
-<label>Senha</label>
-<input id="senha" type="password">
+  <label>Senha</label>
+  <input id="senha" type="password">
 
-<button class="btn-dark" id="btnLogin">🔐 Entrar</button>
+  <button class="btn-dark" id="btnLogin">🔐 Entrar</button>
+</div>
 
-<hr>
+<div id="appArea" style="display:none">
 
 <label>Setor</label>
 <select id="setor">
@@ -114,9 +165,9 @@ button{
 </select>
 
 <label>Código de Barras</label>
-<input id="barcode">
+<input id="barcode" placeholder="Digite ou escaneie">
 
-<button class="btn-dark" id="btnManual">🔍 Pesquisar manualmente</button>
+<button class="btn-muted" id="btnManual">🔍 Pesquisar manualmente</button>
 <button class="btn-primary" id="btnCamera">📷 Ler com a câmera</button>
 
 <div id="camera"></div>
@@ -132,9 +183,23 @@ button{
 <label>Observações</label>
 <textarea id="observacoes"></textarea>
 
-<button class="btn-success" id="btnEnviar">ENVIAR REQUISIÇÃO</button>
+<button class="btn-primary" id="btnEnviar">ENVIAR REQUISIÇÃO</button>
 
-<div class="alert" id="alerta">✅ Requisição enviada com sucesso!</div>
+<div class="alert" id="alerta">✅ Requisição enviada com sucesso</div>
+
+<h3>Histórico (7 dias)</h3>
+<table>
+<thead>
+<tr>
+<th>Produto</th><th>Un.</th><th>Qtd</th><th>Setor</th><th>Status</th><th>Ação</th>
+</tr>
+</thead>
+<tbody id="historico"></tbody>
+</table>
+
+<button class="btn-muted" id="btnMais">Carregar mais</button>
+
+</div>
 
 <audio id="beep">
 <source src="data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA">
@@ -143,64 +208,76 @@ button{
 </div>
 
 <script>
-const SUPABASE_URL = "https://mybsriouiwqsdufujbsc.supabase.co";
-const SUPABASE_KEY = "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* ================== CONFIG ================== */
+const SUPABASE_URL="https://SEU_PROJETO.supabase.co";
+const SUPABASE_KEY="SUA_ANON_KEY";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-const beep = document.getElementById("beep");
-let usuarioLogado = null;
-let lendo=false, buscando=false, unidadeAuto="", barcodeFinal="";
+/* ================== STATE ================== */
+let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
+let page=0,limit=10;
+let lendo=false, unidadeAuto="", barcodeFinal="";
+const beep=document.getElementById("beep");
 
-/* LOGIN */
-btnLogin.onclick = async ()=>{
-  const u = usuario.value.trim();
-  const s = senha.value.trim();
-  if(!u || !s) return alert("Informe usuário e senha");
+/* ================== LOGIN ================== */
+async function login(){
+  const u=usuario.value.trim(), s=senha.value.trim();
+  if(!u||!s) return alert("Informe usuário e senha");
 
-  const {data} = await sb
-    .from("usuarios")
-    .select("*")
-    .eq("usuario",u)
-    .eq("senha",s)
-    .eq("ativo",true)
-    .single();
+  const {data}=await sb.from("usuarios")
+    .select("*").eq("usuario",u).eq("senha",s).eq("ativo",true).single();
 
   if(!data) return alert("Usuário ou senha inválidos");
 
-  usuarioLogado = data.usuario;
-  alert("Login realizado com sucesso");
-};
+  localStorage.setItem("usuario",JSON.stringify(data.usuario));
+  location.reload();
+}
 
-/* NORMALIZA */
+btnLogin.onclick=login;
+
+/* ================== LOGADO ================== */
+if(usuarioLogado){
+  loginArea.style.display="none";
+  appArea.style.display="block";
+  userArea.innerHTML=`
+    <div class="userbox">
+      👤 ${usuarioLogado}
+      <button class="btn-danger" onclick="logout()">Sair</button>
+    </div>`;
+  carregarHistorico();
+}
+
+function logout(){
+  localStorage.removeItem("usuario");
+  location.reload();
+}
+
+/* ================== BARCODE ================== */
 function normalizar(c){
   return "0"+String(c).replace(/\D/g,"");
 }
 
-/* BUSCAR PRODUTO */
+/* ================== BUSCAR PRODUTO ================== */
 async function buscarProduto(code){
-  barcodeFinal = code;
-  const r = await fetch(`/api/buscar-barcode?barcode=${code}`);
-  const j = await r.json();
+  barcodeFinal=code;
+  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+  const j=await r.json();
   if(!j.produto) return alert("Produto não encontrado");
 
-  produto.value = j.produto.descricao;
-  unidadeAuto = j.produto.unidadeDeVenda;
-  unidadeBox.innerHTML = `<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
+  produto.value=j.produto.descricao;
+  unidadeAuto=j.produto.unidadeDeVenda;
+  unidadeBox.innerHTML=`<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
   beep.play();
   if(lendo){Quagga.stop();lendo=false;}
 }
 
-/* MANUAL */
-btnManual.onclick=()=>{
-  if(!barcode.value) return;
-  buscarProduto(normalizar(barcode.value));
-};
+/* ================== MANUAL ================== */
+btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* CAMERA */
+/* ================== CAMERA ================== */
 btnCamera.onclick=()=>{
   if(lendo) return;
   lendo=true;
-
   Quagga.init({
     inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
     decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]},
@@ -209,33 +286,78 @@ btnCamera.onclick=()=>{
     if(err) return alert("Erro câmera");
     Quagga.start();
   });
-
-  Quagga.onDetected(r=>{
-    if(buscando) return;
-    buscarProduto(normalizar(r.codeResult.code));
-  });
+  Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
 };
 
-/* ENVIAR */
-btnEnviar.onclick = async ()=>{
-  if(!usuarioLogado) return alert("Faça login");
-  if(!setor.value) return alert("Selecione o setor");
-  if(!produto.value || !quantidade.value) return alert("Produto e quantidade obrigatórios");
+/* ================== ENVIO ================== */
+btnEnviar.onclick=async()=>{
+  if(!usuarioLogado) return;
+  if(!setor.value||!produto.value||!quantidade.value) return alert("Preencha tudo");
+
+  overlay.style.display="flex";
 
   await sb.from("requisicoes").insert({
-    usuario: usuarioLogado,
-    setor: setor.value,
-    produto: produto.value,
-    unidade: unidadeAuto,
-    quantidade: quantidade.value,
-    observacoes: observacoes.value,
-    barcode: barcodeFinal,
-    status: "PENDENTE"
+    usuario:usuarioLogado,
+    setor:setor.value,
+    produto:produto.value,
+    unidade:unidadeAuto,
+    quantidade:quantidade.value,
+    observacoes:observacoes.value,
+    barcode:barcodeFinal,
+    status:"PENDENTE"
   });
 
+  overlay.style.display="none";
   alerta.style.display="block";
   setTimeout(()=>alerta.style.display="none",3000);
+  limparCampos();
+  page=0;
+  historico.innerHTML="";
+  carregarHistorico();
 };
+
+/* ================== HISTÓRICO ================== */
+async function carregarHistorico(){
+  const seteDias=new Date(Date.now()-7*86400000).toISOString();
+  const {data}=await sb.from("requisicoes")
+    .select("*")
+    .eq("usuario",usuarioLogado)
+    .gte("created_at",seteDias)
+    .order("created_at",{ascending:false})
+    .range(page*limit,(page+1)*limit-1);
+
+  data.forEach(r=>{
+    historico.innerHTML+=`
+    <tr>
+      <td>${r.produto}</td>
+      <td>${r.unidade}</td>
+      <td>${r.quantidade}</td>
+      <td>${r.setor}</td>
+      <td>${r.status}</td>
+      <td><button class="btn-danger" onclick="excluir('${r.id}')">X</button></td>
+    </tr>`;
+  });
+  page++;
+}
+
+btnMais.onclick=carregarHistorico;
+
+/* ================== EXCLUIR ================== */
+async function excluir(id){
+  if(!confirm("Excluir registro?")) return;
+  await sb.from("requisicoes").delete().eq("id",id);
+  historico.innerHTML="";
+  page=0;
+  carregarHistorico();
+}
+
+function limparCampos(){
+  barcode.value="";
+  produto.value="";
+  quantidade.value="";
+  observacoes.value="";
+  unidadeBox.innerHTML="";
+}
 </script>
 
 </body>
