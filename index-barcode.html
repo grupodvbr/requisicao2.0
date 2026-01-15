@@ -161,6 +161,20 @@ th{background:#f1f5f9}
   background:#fee2e2;
   color:#991b1b;
 }
+.list{
+  background:#fff;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  margin-top:8px;
+  max-height:180px;
+  overflow:auto;
+}
+.item{
+  padding:10px;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
+}
+.item:hover{background:#f1f5f9}
 
 </style>
 </head>
@@ -192,10 +206,20 @@ th{background:#f1f5f9}
   <option>Bar</option>
 </select>
 
-<label>Código de Barras</label>
-<input id="barcode" placeholder="Digite ou escaneie">
+<!-- ADICIONE LOGO ABAIXO DO SELECT SETOR -->
 
-<button class="btn-muted" id="btnManual">Buscar manual</button>
+<label>Forma de Busca</label>
+<select id="modoBusca">
+  <option value="barcode">Código de Barras</option>
+  <option value="nome">Nome do Produto</option>
+  <option value="id">ID do Produto</option>
+</select>
+
+<label>Buscar Produto</label>
+<input id="buscaExtra" placeholder="Digite para buscar">
+<div id="listaBusca" class="list hidden"></div>
+
+  
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
 <button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
 
@@ -297,18 +321,7 @@ async function buscarProduto(code){
  }catch{}
 }
 
-/* ===== CAMERA ===== */
-btnOpenCamera.onclick=()=>{
- camera.style.display="block";
- btnOpenCamera.classList.add("hidden");
- btnCloseCamera.classList.remove("hidden");
- codigoLido.textContent="";
- Quagga.init({
-  inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
-  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
- },()=>Quagga.start());
- Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
-};
+
 btnCloseCamera.onclick=fecharCamera;
 function fecharCamera(){
  Quagga.stop();
@@ -316,7 +329,6 @@ function fecharCamera(){
  btnOpenCamera.classList.remove("hidden");
  btnCloseCamera.classList.add("hidden");
 }
-btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
 /* ===== ENVIAR ===== */
 btnEnviar.onclick=async()=>{
@@ -365,6 +377,75 @@ async function excluir(id){
  const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
  if(data) document.getElementById("row-"+id)?.remove();
 }
+
+const modoBusca = document.getElementById("modoBusca");
+const buscaExtra = document.getElementById("buscaExtra");
+const listaBusca = document.getElementById("listaBusca");
+
+/* ===== BUSCA EXTRA (NOME / ID) ===== */
+buscaExtra.addEventListener("input", async () => {
+  const q = buscaExtra.value.trim();
+  listaBusca.innerHTML = "";
+  listaBusca.classList.add("hidden");
+
+  if (modoBusca.value === "nome" && q.length >= 2) {
+    const r = await fetch(`/api/produtos-busca?q=${encodeURIComponent(q)}`);
+    const j = await r.json();
+    if (!j.items) return;
+
+    listaBusca.classList.remove("hidden");
+
+    j.items.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.textContent = `${p.id} - ${p.descricao}`;
+      div.onclick = () => carregarProdutoPorId(p.id);
+      listaBusca.appendChild(div);
+    });
+  }
+
+  if (modoBusca.value === "id" && q.length >= 1) {
+    carregarProdutoPorId(q);
+  }
+});
+
+async function carregarProdutoPorId(id){
+  listaBusca.classList.add("hidden");
+  try{
+    const r = await fetch(`/api/produto-detalhe?id=${id}`);
+    const p = await r.json();
+
+    produto.value = p.descricao;
+    unidadeAuto = p.unidadeDeVenda;
+    unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
+    barcodeFinal = ""; // não veio de código de barras
+  }catch(e){
+    console.error("Erro ao buscar produto por ID", e);
+  }
+}
+
+/* ===== AJUSTE: DESABILITA SCANNER SE NÃO FOR BARCODE ===== */
+btnOpenCamera.onclick = () => {
+  if (modoBusca.value !== "barcode") {
+    alert("Selecione 'Código de Barras' para usar a câmera");
+    return;
+  }
+
+  camera.style.display="block";
+  btnOpenCamera.classList.add("hidden");
+  btnCloseCamera.classList.remove("hidden");
+  codigoLido.textContent="";
+
+  Quagga.init({
+    inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
+    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+  },()=>Quagga.start());
+
+  Quagga.onDetected(r=>{
+    buscarProduto(normalizar(r.codeResult.code));
+  });
+};
+
 </script>
 </body>
 </html>
