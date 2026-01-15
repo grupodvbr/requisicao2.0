@@ -50,8 +50,9 @@ header button{
   border:none;
   background:var(--primary);
   color:#fff;
-  padding:8px 14px;
-  border-radius:10px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
   font-weight:700;
   cursor:pointer;
 }
@@ -121,6 +122,10 @@ td.obs{
   text-align:left;
   font-size:12px;
   color:var(--muted);
+  cursor:pointer;
+}
+td.editavel{
+  cursor:pointer;
 }
 select.status{
   padding:6px;
@@ -128,6 +133,43 @@ select.status{
   font-weight:700;
 }
 
+/* MODAL */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+.modal-box{
+  background:#fff;
+  padding:20px;
+  border-radius:16px;
+  width:90%;
+  max-width:400px;
+}
+.modal-box h3{margin-top:0}
+.modal-box input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #cbd5e1;
+  margin-bottom:10px;
+}
+.modal-box button{
+  width:100%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  font-weight:800;
+  margin-top:6px;
+}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-muted{background:#e5e7eb}
+
+/* MOBILE */
 @media(max-width:720px){
   th:nth-child(7),
   td:nth-child(7){display:none;}
@@ -184,6 +226,16 @@ select.status{
 <tbody id="lista"></tbody>
 </table>
 
+<!-- MODAL PRODUTO -->
+<div class="modal" id="modalProduto">
+  <div class="modal-box">
+    <h3>Alterar produto</h3>
+    <input id="novoBarcode" placeholder="Código de barras">
+    <button class="btn-primary" onclick="confirmarProduto()">Confirmar</button>
+    <button class="btn-muted" onclick="fecharModal()">Cancelar</button>
+  </div>
+</div>
+
 <script>
 const sb = supabase.createClient(
   "https://mybsriouiwqsdufujbsc.supabase.co",
@@ -191,20 +243,16 @@ const sb = supabase.createClient(
 );
 
 const listaEl = document.getElementById("lista");
-let dados = [];
+let dados=[], editandoId=null;
 
 function toggleTema(){
   document.body.classList.toggle("dark");
 }
 
-/* CARREGAR */
+/* LOAD */
 async function carregar(){
-  const {data} = await sb
-    .from("requisicoes")
-    .select("*")
-    .order("created_at",{ascending:false});
-
-  dados = data || [];
+  const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
+  dados=data||[];
   preencherFiltros();
   filtrar();
 }
@@ -212,36 +260,22 @@ async function carregar(){
 /* FILTROS */
 function preencherFiltros(){
   fSetor.innerHTML='<option value="">Todos Setores</option>';
-  [...new Set(dados.map(d=>d.setor))].forEach(s=>s && (fSetor.innerHTML+=`<option>${s}</option>`));
-
+  [...new Set(dados.map(d=>d.setor))].forEach(s=>s&&(fSetor.innerHTML+=`<option>${s}</option>`));
   fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
-  [...new Set(dados.map(d=>d.usuario))].forEach(u=>u && (fUsuario.innerHTML+=`<option>${u}</option>`));
+  [...new Set(dados.map(d=>d.usuario))].forEach(u=>u&&(fUsuario.innerHTML+=`<option>${u}</option>`));
 }
-
 [fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
 
 /* FILTRAR */
 function filtrar(){
-  let lista = [...dados];
-
-  if(!fInicio.value && !fFim.value && fStatus.value==="PENDENTE"){
-    lista = lista.filter(d=>d.status==="PENDENTE");
-  }
-
-  if(fStatus.value && fStatus.value!=="PENDENTE")
-    lista = lista.filter(d=>d.status===fStatus.value);
-
-  if(fSetor.value) lista = lista.filter(d=>d.setor===fSetor.value);
-  if(fUsuario.value) lista = lista.filter(d=>d.usuario===fUsuario.value);
-
+  let lista=[...dados];
+  if(fStatus.value) lista=lista.filter(d=>d.status===fStatus.value);
+  if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
+  if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
   if(fItem.value){
     const t=fItem.value.toLowerCase();
-    lista = lista.filter(d =>
-      d.produto.toLowerCase().includes(t) ||
-      (d.observacoes||"").toLowerCase().includes(t)
-    );
+    lista=lista.filter(d=>d.produto.toLowerCase().includes(t)||(d.observacoes||"").toLowerCase().includes(t));
   }
-
   render(lista);
 }
 
@@ -253,21 +287,20 @@ function render(lista){
   lista.forEach(r=>{
     c[r.status]=(c[r.status]||0)+1;
     listaEl.innerHTML+=`
-      <tr>
-        <td>${new Date(r.created_at).toLocaleString()}</td>
-        <td>${r.produto}</td>
-        <td>${r.quantidade}</td>
-        <td>${r.unidade}</td>
-        <td>${r.setor}</td>
-        <td>${r.usuario}</td>
-        <td class="obs">${r.observacoes||""}</td>
-        <td>
-          <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
-            ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
-              .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
-          </select>
-        </td>
-      </tr>`;
+    <tr>
+      <td>${new Date(r.created_at).toLocaleString()}</td>
+      <td class="editavel" ondblclick="editarProduto('${r.id}')">${r.produto}</td>
+      <td class="editavel" ondblclick="editarQuantidade('${r.id}')">${r.quantidade}</td>
+      <td>${r.unidade}</td>
+      <td>${r.setor}</td>
+      <td>${r.usuario}</td>
+      <td class="obs">${r.observacoes||""}</td>
+      <td>
+        <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
+          ${Object.keys(c).map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+      </td>
+    </tr>`;
   });
 
   cP.textContent=c.PENDENTE||0;
@@ -283,7 +316,40 @@ async function atualizarStatus(id,status){
   await sb.from("requisicoes").update({status}).eq("id",id);
   const r=dados.find(d=>d.id===id);
   if(r) r.status=status;
-  filtrar();
+}
+
+/* PRODUTO */
+function editarProduto(id){
+  editandoId=id;
+  modalProduto.style.display="flex";
+}
+async function confirmarProduto(){
+  const code=novoBarcode.value;
+  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+  const j=await r.json();
+  if(!j.produto) return;
+  await sb.from("requisicoes").update({
+    produto:j.produto.descricao,
+    unidade:j.produto.unidadeDeVenda,
+    barcode:code
+  }).eq("id",editandoId);
+  fecharModal();
+  carregar();
+}
+function fecharModal(){
+  modalProduto.style.display="none";
+  novoBarcode.value="";
+}
+
+/* QUANTIDADE */
+function editarQuantidade(id){
+  const r=dados.find(d=>d.id===id);
+  const decimal=/KG|LT|L/i.test(r.unidade);
+  const val=prompt("Nova quantidade:",r.quantidade);
+  if(val===null) return;
+  const num=decimal?parseFloat(val):parseInt(val);
+  if(isNaN(num)) return;
+  sb.from("requisicoes").update({quantidade:num}).eq("id",id).then(carregar);
 }
 
 carregar();
