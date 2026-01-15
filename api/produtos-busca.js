@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Token não retornado" });
     }
 
-    const url = `https://villchopp.varejofacil.com/api/v1/produto/produtos?q=descricao==*${q}*&start=0&count=20`;
+    const url = `https://villachopp.varejofacil.com/api/v1/produto/produtos?q=descricao==*${q}*&start=0&count=20`;
 
     console.log("BUSCA URL:", url);
 
