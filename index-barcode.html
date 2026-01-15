@@ -5,11 +5,7 @@
 <title>Requisição de Compras • Delícia Gourmet</title>
 
 <meta name="viewport"
-content="width=device-width,
-initial-scale=1.0,
-maximum-scale=1.0,
-user-scalable=no,
-viewport-fit=cover">
+content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 
 <meta name="theme-color" content="#1e40af">
 <link rel="manifest" href="/manifest.json">
@@ -28,8 +24,6 @@ body{
   justify-content:center;
   padding:12px;
 }
-
-/* ===== CONTAINER ===== */
 .container{
   background:#fff;
   border-radius:26px;
@@ -39,16 +33,26 @@ body{
   padding:22px;
   position:relative;
 }
-
-/* ===== HEADER ===== */
-h2{
-  text-align:center;
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.topbar h2{
+  margin:0;
   font-weight:800;
-  margin:8px 0 18px;
-  color:#0f172a;
+}
+.btn-logout{
+  background:#fee2e2;
+  color:#991b1b;
+  border:none;
+  padding:6px 12px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:12px;
+  cursor:pointer;
 }
 
-/* ===== FORM ===== */
 label{font-weight:700;margin-top:14px;display:block}
 input,select,textarea{
   width:100%;
@@ -61,7 +65,6 @@ input,select,textarea{
 input[readonly]{background:#f1f5f9}
 textarea{min-height:80px;resize:none}
 
-/* ===== BUTTONS ===== */
 button{
   width:100%;
   padding:14px;
@@ -74,11 +77,8 @@ button{
   position:relative;
 }
 .btn-primary{background:#2563eb;color:#fff}
-.btn-dark{background:#0f172a;color:#fff}
 .btn-muted{background:#e5e7eb;color:#0f172a}
-.btn-danger{background:#fee2e2;color:#991b1b}
 
-/* overlay botão */
 button.loading{pointer-events:none}
 button.loading::after{
   content:"Processando…";
@@ -88,11 +88,9 @@ button.loading::after{
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight:800;
   border-radius:18px;
 }
 
-/* ===== CAMERA ===== */
 #camera{
   display:none;
   width:100%;
@@ -108,11 +106,9 @@ button.loading::after{
   margin-top:8px;
   text-align:center;
   font-weight:800;
-  font-size:14px;
   color:#2563eb;
 }
 
-/* ===== BADGE ===== */
 .badge{
   display:inline-block;
   background:#e0f2fe;
@@ -124,29 +120,6 @@ button.loading::after{
   font-size:13px;
 }
 
-/* ===== MENU INFERIOR ===== */
-.menu-bottom{
-  position:fixed;
-  bottom:12px;
-  left:50%;
-  transform:translateX(-50%);
-  width:calc(100% - 24px);
-  max-width:520px;
-  background:#fff;
-  border-radius:20px;
-  box-shadow:0 15px 40px rgba(0,0,0,.2);
-  padding:12px;
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  z-index:50;
-}
-.menu-bottom button{
-  flex:1;
-  margin:0;
-}
-
-/* ===== HISTÓRICO ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -159,14 +132,6 @@ th,td{
   text-align:center;
 }
 th{background:#f1f5f9}
-.action-delete{
-  background:#fee2e2;
-  color:#991b1b;
-  border:none;
-  border-radius:12px;
-  padding:6px 12px;
-  font-weight:800;
-}
 
 .hidden{display:none}
 </style>
@@ -175,30 +140,30 @@ th{background:#f1f5f9}
 <body>
 <div class="container">
 
-<h2>📋 Requisição de Compras</h2>
+<div class="topbar">
+  <h2>📋 Requisição</h2>
+  <button class="btn-logout" onclick="logout()">Sair</button>
+</div>
 
-<!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
   <input id="usuario">
   <label>Senha</label>
   <input id="senha" type="password">
-  <button class="btn-dark" id="btnLogin">Entrar</button>
+  <button class="btn-primary" id="btnLogin">Entrar</button>
 </div>
 
-<!-- APP -->
 <div id="appArea" class="hidden">
 
 <label>Setor</label>
 <select id="setor">
-  <option value="">Selecione</option>
   <option>Cozinha</option>
   <option>Limpeza</option>
   <option>Bar</option>
 </select>
 
 <label>Código de Barras</label>
-<input id="barcode" placeholder="Digite ou escaneie">
+<input id="barcode">
 
 <button class="btn-muted" id="btnManual">Buscar manual</button>
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
@@ -220,19 +185,12 @@ th{background:#f1f5f9}
 
 <button class="btn-primary" id="btnEnviar">Enviar requisição</button>
 
-<h3 style="margin-top:18px">Histórico (7 dias)</h3>
-
+<h3>Histórico</h3>
 <table>
-<thead>
-<tr><th>Produto</th><th>Qtd</th><th>Status</th><th>Ação</th></tr>
-</thead>
+<thead><tr><th>Produto</th><th>Qtd</th><th>Status</th></tr></thead>
 <tbody id="historico"></tbody>
 </table>
 
-</div>
-
-<div class="menu-bottom hidden" id="menuBottom">
-  <button class="btn-muted" onclick="logout()">🚪 Sair</button>
 </div>
 
 <audio id="beep">
@@ -242,142 +200,81 @@ th{background:#f1f5f9}
 </div>
 
 <script>
-const sb = supabase.createClient(
-  "https://mybsriouiwqsdufujbsc.supabase.co",
-  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
+const sb=supabase.createClient(
+ "https://mybsriouiwqsdufujbsc.supabase.co",
+ "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
-let unidadeAuto="", barcodeFinal="";
-let lendo=false;
+const setorEl=document.getElementById("setor");
+setorEl.value=localStorage.getItem("setor")||setorEl.value;
+setorEl.onchange=()=>localStorage.setItem("setor",setorEl.value);
 
-/* LOGIN */
-btnLogin.onclick=async()=>{
-  const {data}=await sb.from("usuarios")
-    .select("*")
-    .eq("usuario",usuario.value)
-    .eq("senha",senha.value)
-    .eq("ativo",true)
-    .single();
-  if(!data) return;
-  localStorage.setItem("usuario",JSON.stringify(data.usuario));
-  location.reload();
-};
-
-if(usuarioLogado){
-  loginArea.classList.add("hidden");
-  appArea.classList.remove("hidden");
-  menuBottom.classList.remove("hidden");
-  carregarHistorico();
-}
-
-/* BARCODE */
 const normalizar=c=>"0"+String(c).replace(/\D/g,"");
 
-/* BUSCAR PRODUTO (SEM ERRO VISUAL) */
 async function buscarProduto(code){
-  barcodeFinal=code;
-  codigoLido.textContent=`Lendo código: ${code}`;
-
-  try{
-    const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
-    const j=await r.json();
-
-    if(j && j.produto){
-      produto.value=j.produto.descricao;
-      unidadeAuto=j.produto.unidadeDeVenda;
-      unidadeBox.innerHTML=`<div class="badge">📏 ${unidadeAuto}</div>`;
-      document.getElementById("beep").play();
-      fecharCamera();
-    }
-  }catch(e){}
+ codigoLido.textContent=`Lendo código: ${code}`;
+ barcodeFinal=code;
+ try{
+  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+  const j=await r.json();
+  if(j?.produto){
+   produto.value=j.produto.descricao;
+   unidadeBox.innerHTML=`<div class="badge">${j.produto.unidadeDeVenda}</div>`;
+   beep.play();
+   fecharCamera();
+  }
+ }catch{}
 }
 
-/* CAMERA */
 btnOpenCamera.onclick=()=>{
-  camera.style.display="block";
-  btnOpenCamera.classList.add("hidden");
-  btnCloseCamera.classList.remove("hidden");
-  codigoLido.textContent="";
-
-  Quagga.init({
-    inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
-    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
-  },()=>Quagga.start());
-
-  Quagga.onDetected(r=>{
-    const code=normalizar(r.codeResult.code);
-    buscarProduto(code);
-  });
+ camera.style.display="block";
+ btnOpenCamera.classList.add("hidden");
+ btnCloseCamera.classList.remove("hidden");
+ codigoLido.textContent="";
+ Quagga.init({
+  inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
+  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+ },()=>Quagga.start());
+ Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
 };
-
-function fecharCamera(){
-  Quagga.stop();
-  camera.style.display="none";
-  btnOpenCamera.classList.remove("hidden");
-  btnCloseCamera.classList.add("hidden");
-}
 btnCloseCamera.onclick=fecharCamera;
+function fecharCamera(){
+ Quagga.stop();
+ camera.style.display="none";
+ btnOpenCamera.classList.remove("hidden");
+ btnCloseCamera.classList.add("hidden");
+}
 
 btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ENVIAR */
 btnEnviar.onclick=async()=>{
-  if(!setor.value||!produto.value||!quantidade.value) return;
-  btnEnviar.classList.add("loading");
-  await sb.from("requisicoes").insert({
-    usuario:usuarioLogado,
-    setor:setor.value,
-    produto:produto.value,
-    unidade:unidadeAuto,
-    quantidade:quantidade.value,
-    observacoes:observacoes.value,
-    barcode:barcodeFinal,
-    status:"PENDENTE"
-  });
-  btnEnviar.classList.remove("loading");
-  limparCampos();
-  historico.innerHTML="";
-  carregarHistorico();
+ if(!produto.value||!quantidade.value)return;
+ btnEnviar.classList.add("loading");
+ await sb.from("requisicoes").insert({
+  usuario:JSON.parse(localStorage.getItem("usuario")),
+  setor:setorEl.value,
+  produto:produto.value,
+  quantidade:quantidade.value,
+  observacoes:observacoes.value,
+  barcode:barcodeFinal,
+  status:"PENDENTE"
+ });
+ btnEnviar.classList.remove("loading");
+ produto.value="";quantidade.value="";observacoes.value="";unidadeBox.innerHTML="";
 };
 
-/* HISTÓRICO */
-async function carregarHistorico(){
-  const seteDias=new Date(Date.now()-7*86400000).toISOString();
-  const {data}=await sb.from("requisicoes")
-    .select("*")
-    .eq("usuario",usuarioLogado)
-    .gte("created_at",seteDias)
-    .order("created_at",{ascending:false});
-
-  data.forEach(r=>{
-    const horas=(Date.now()-new Date(r.created_at))/3600000;
-    historico.insertAdjacentHTML("beforeend",`
-      <tr id="row-${r.id}">
-        <td>${r.produto}</td>
-        <td>${r.quantidade}</td>
-        <td>${r.status}</td>
-        <td>${horas<=1?`<button class="action-delete" onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
-      </tr>`);
-  });
-}
-
-async function excluir(id){
-  const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
-  if(data) document.getElementById("row-"+id).remove();
-}
-
-function limparCampos(){
-  barcode.value="";
-  produto.value="";
-  quantidade.value="";
-  observacoes.value="";
-  unidadeBox.innerHTML="";
-}
+btnLogin.onclick=async()=>{
+ const {data}=await sb.from("usuarios").select("*")
+ .eq("usuario",usuario.value).eq("senha",senha.value).eq("ativo",true).single();
+ if(!data)return;
+ localStorage.setItem("usuario",JSON.stringify(data.usuario));
+ loginArea.classList.add("hidden");
+ appArea.classList.remove("hidden");
+};
 
 function logout(){
-  localStorage.removeItem("usuario");
-  location.reload();
+ localStorage.removeItem("usuario");
+ location.reload();
 }
 </script>
 </body>
