@@ -430,7 +430,7 @@ buscaProdutoId.onchange = async () => {
   const id = buscaProdutoId.value;
   if (!id) return;
 
-  const r = await fetch(`/api/buscar-id?id=${id}`)
+  const r = await fetch(`/api/produto?id=${id}`);
   const j = await r.json();
 
   if (j?.items?.length) {
