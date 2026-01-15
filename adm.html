@@ -15,16 +15,13 @@
   --bg:#f4f6f8;
   --card:#ffffff;
   --ink:#0f172a;
+  --muted:#64748b;
   --primary:#2563eb;
   --success:#16a34a;
   --danger:#dc2626;
   --warn:#f59e0b;
-  --muted:#64748b;
-}
-body.dark{
-  --bg:#020617;
-  --card:#020617;
-  --ink:#e5e7eb;
+  --purple:#7c3aed;
+  --gray:#94a3b8;
 }
 *{box-sizing:border-box}
 body{
@@ -51,11 +48,10 @@ header button{
   border:none;
   background:var(--primary);
   color:#fff;
-  padding:6px 10px;
+  padding:6px 12px;
   border-radius:999px;
   font-size:12px;
-  font-weight:700;
-  cursor:pointer;
+  font-weight:800;
 }
 
 /* RESUMO */
@@ -66,20 +62,26 @@ header button{
   padding:14px;
 }
 .card{
-  background:var(--card);
-  padding:12px;
-  border-radius:14px;
+  padding:14px;
+  border-radius:16px;
   display:flex;
   justify-content:space-between;
   align-items:center;
   font-weight:800;
   font-size:13px;
+  color:#fff;
 }
 .card span{
-  background:#e5e7eb;
+  background:rgba(255,255,255,.25);
   padding:4px 10px;
   border-radius:999px;
 }
+.c-pendente{background:var(--primary)}
+.c-carrinho{background:var(--purple)}
+.c-comprado{background:var(--warn);color:#000}
+.c-negado{background:var(--danger)}
+.c-entregue{background:var(--success)}
+.c-se{background:var(--gray)}
 
 /* FILTROS */
 .filtros{
@@ -92,8 +94,7 @@ header button{
   top:64px;
   z-index:15;
 }
-.filtros input,
-.filtros select{
+.filtros input,.filtros select{
   padding:10px;
   border-radius:10px;
   border:1px solid #cbd5e1;
@@ -119,16 +120,26 @@ th,td{
   font-size:13px;
   text-align:center;
 }
-td.obs{color:var(--muted)}
-td.editavel{cursor:pointer;font-weight:700}
+
+/* CÉLULAS EDITÁVEIS */
+.editavel{
+  font-weight:800;
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:manipulation;
+}
+td.obs{
+  color:var(--muted);
+  text-align:left;
+}
 
 select.status{
   padding:6px;
   border-radius:8px;
-  font-weight:700;
+  font-weight:800;
 }
 
-/* MODAL */
 .modal{
   position:fixed;
   inset:0;
@@ -164,13 +175,11 @@ select.status{
 .btn-primary{background:var(--primary);color:#fff}
 .btn-muted{background:#e5e7eb}
 
-/* CAMERA MODAL */
 #cameraModal{
   width:100%;
   height:220px;
   background:#000;
   border-radius:12px;
-  overflow:hidden;
   display:none;
 }
 #codigoLido{
@@ -186,22 +195,20 @@ select.status{
 
 <header>
   <h1>📋 Painel de Requisições</h1>
-  <button onclick="toggleTema()">🌙 Tema</button>
+  <button onclick="document.body.classList.toggle('dark')">🌙 Tema</button>
 </header>
 
 <div class="resumo">
-  <div class="card">PENDENTE <span id="cP">0</span></div>
-  <div class="card">NO CARRINHO <span id="cC">0</span></div>
-  <div class="card">COMPRADO <span id="cCO">0</span></div>
-  <div class="card">NEGADO <span id="cN">0</span></div>
-  <div class="card">ENTREGUE <span id="cE">0</span></div>
-  <div class="card">SEM ESTOQUE <span id="cSE">0</span></div>
+  <div class="card c-pendente">PENDENTE <span id="cP">0</span></div>
+  <div class="card c-carrinho">NO CARRINHO <span id="cC">0</span></div>
+  <div class="card c-comprado">COMPRADO <span id="cCO">0</span></div>
+  <div class="card c-negado">NEGADO <span id="cN">0</span></div>
+  <div class="card c-entregue">ENTREGUE <span id="cE">0</span></div>
+  <div class="card c-se">SEM ESTOQUE <span id="cSE">0</span></div>
 </div>
 
 <div class="filtros">
-  <input type="date" id="fInicio">
-  <input type="date" id="fFim">
-  <input type="text" id="fItem" placeholder="Item / Observação">
+  <input type="text" id="fItem" placeholder="Item / Obs">
   <select id="fStatus">
     <option value="PENDENTE" selected>PENDENTE</option>
     <option value="">TODOS</option>
@@ -211,32 +218,25 @@ select.status{
     <option>ENTREGUE</option>
     <option>SEM ESTOQUE</option>
   </select>
-  <select id="fSetor"></select>
-  <select id="fUsuario"></select>
 </div>
 
 <table>
 <thead>
 <tr>
-  <th>Data</th>
   <th>Produto</th>
   <th>Qtd</th>
   <th>Un</th>
-  <th>Setor</th>
-  <th>Solicitante</th>
-  <th>Obs</th>
   <th>Status</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
 
-<!-- MODAL PRODUTO -->
 <div class="modal" id="modalProduto">
   <div class="modal-box">
     <h3>Alterar produto</h3>
     <input id="novoBarcode" placeholder="Código de barras">
-    <button class="btn-muted" onclick="abrirCameraModal()">Abrir câmera</button>
+    <button class="btn-muted" onclick="abrirCamera()">Abrir câmera</button>
     <div id="cameraModal"></div>
     <div id="codigoLido"></div>
     <button class="btn-primary" onclick="confirmarProduto()">Confirmar</button>
@@ -249,143 +249,99 @@ select.status{
 </audio>
 
 <script>
-const sb = supabase.createClient(
-  "https://mybsriouiwqsdufujbsc.supabase.co",
-  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
+const sb=supabase.createClient(
+ "https://mybsriouiwqsdufujbsc.supabase.co",
+ "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-const listaEl=document.getElementById("lista");
 let dados=[],editandoId=null;
 
-/* TEMA */
-function toggleTema(){document.body.classList.toggle("dark");}
-
-/* LOAD */
 async function carregar(){
-  const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
-  dados=data||[];
-  preencherFiltros();
-  filtrar();
+ const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
+ dados=data||[];
+ render(dados);
 }
 
-/* FILTROS */
-function preencherFiltros(){
-  fSetor.innerHTML='<option value="">Todos Setores</option>';
-  [...new Set(dados.map(d=>d.setor))].forEach(s=>s&&(fSetor.innerHTML+=`<option>${s}</option>`));
-  fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
-  [...new Set(dados.map(d=>d.usuario))].forEach(u=>u&&(fUsuario.innerHTML+=`<option>${u}</option>`));
-}
-[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
-
-/* FILTRAR */
-function filtrar(){
-  let lista=[...dados];
-  if(fStatus.value) lista=lista.filter(d=>d.status===fStatus.value);
-  if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
-  if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
-  if(fItem.value){
-    const t=fItem.value.toLowerCase();
-    lista=lista.filter(d=>d.produto.toLowerCase().includes(t)||(d.observacoes||"").toLowerCase().includes(t));
-  }
-  render(lista);
-}
-
-/* RENDER */
 function render(lista){
-  listaEl.innerHTML="";
-  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
+ listaEl.innerHTML="";
+ const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
 
-  lista.forEach(r=>{
-    c[r.status]=(c[r.status]||0)+1;
-    listaEl.innerHTML+=`
-    <tr>
-      <td>${new Date(r.created_at).toLocaleString()}</td>
-      <td class="editavel" ondblclick="editarProduto('${r.id}')">${r.produto}</td>
-      <td class="editavel" ondblclick="editarQuantidade('${r.id}')">${r.quantidade}</td>
-      <td>${r.unidade}</td>
-      <td>${r.setor}</td>
-      <td>${r.usuario}</td>
-      <td class="obs">${r.observacoes||""}</td>
-      <td>
-        <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
-          ${Object.keys(c).map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
-        </select>
-      </td>
-    </tr>`;
-  });
+ lista.forEach(r=>{
+  c[r.status]++;
+  listaEl.innerHTML+=`
+  <tr>
+    <td class="editavel" ondblclick="editarProduto('${r.id}')">${r.produto}</td>
+    <td class="editavel" ondblclick="editarQtd('${r.id}')">${r.quantidade}</td>
+    <td>${r.unidade}</td>
+    <td>
+      <select class="status" onchange="mudarStatus('${r.id}',this.value)">
+        ${Object.keys(c).map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+      </select>
+    </td>
+  </tr>`;
+ });
 
-  cP.textContent=c.PENDENTE||0;
-  cC.textContent=c["NO CARRINHO"]||0;
-  cCO.textContent=c.COMPRADO||0;
-  cN.textContent=c.NEGADO||0;
-  cE.textContent=c.ENTREGUE||0;
-  cSE.textContent=c["SEM ESTOQUE"]||0;
+ cP.textContent=c.PENDENTE;
+ cC.textContent=c["NO CARRINHO"];
+ cCO.textContent=c.COMPRADO;
+ cN.textContent=c.NEGADO;
+ cE.textContent=c.ENTREGUE;
+ cSE.textContent=c["SEM ESTOQUE"];
 }
 
-/* STATUS */
-async function atualizarStatus(id,status){
-  await sb.from("requisicoes").update({status}).eq("id",id);
-  const r=dados.find(d=>d.id===id);
-  if(r) r.status=status;
+async function mudarStatus(id,status){
+ await sb.from("requisicoes").update({status}).eq("id",id);
+ const r=dados.find(d=>d.id===id);
+ r.status=status;
+ render(dados);
 }
 
-/* PRODUTO */
 function editarProduto(id){
-  editandoId=id;
-  modalProduto.style.display="flex";
+ editandoId=id;
+ modalProduto.style.display="flex";
 }
+
 function fecharModal(){
-  modalProduto.style.display="none";
-  novoBarcode.value="";
-  fecharCameraModal();
+ modalProduto.style.display="none";
+ cameraModal.style.display="none";
+ if(Quagga) Quagga.stop();
 }
 
-/* CAMERA MODAL */
-function abrirCameraModal(){
-  cameraModal.style.display="block";
-  Quagga.init({
-    inputStream:{type:"LiveStream",target:cameraModal,constraints:{facingMode:"environment"}},
-    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
-  },()=>Quagga.start());
+function abrirCamera(){
+ cameraModal.style.display="block";
+ Quagga.init({
+  inputStream:{type:"LiveStream",target:cameraModal,constraints:{facingMode:"environment"}},
+  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+ },()=>Quagga.start());
 
-  Quagga.onDetected(r=>{
-    const code="0"+r.codeResult.code.replace(/\D/g,"");
-    novoBarcode.value=code;
-    codigoLido.textContent=`Código: ${code}`;
-  });
-}
-function fecharCameraModal(){
-  if(Quagga) Quagga.stop();
-  cameraModal.style.display="none";
-  codigoLido.textContent="";
+ Quagga.onDetected(r=>{
+  novoBarcode.value="0"+r.codeResult.code.replace(/\D/g,"");
+  codigoLido.textContent=novoBarcode.value;
+ });
 }
 
-/* CONFIRMAR PRODUTO */
 async function confirmarProduto(){
-  const code=novoBarcode.value;
-  const {data}=await sb.from("produtos").select("*").eq("barcode",code).single();
-  if(!data) return;
-
-  await sb.from("requisicoes").update({
-    produto:data.descricao,
-    unidade:data.unidade,
-    barcode:code
-  }).eq("id",editandoId);
-
-  document.getElementById("beep").play();
-  fecharModal();
-  carregar();
+ const {data}=await sb.from("produtos").select("*").eq("barcode",novoBarcode.value).single();
+ if(!data) return;
+ await sb.from("requisicoes").update({
+  produto:data.descricao,
+  unidade:data.unidade
+ }).eq("id",editandoId);
+ document.getElementById("beep").play();
+ fecharModal();
+ carregar();
 }
 
-/* QUANTIDADE */
-function editarQuantidade(id){
-  const r=dados.find(d=>d.id===id);
-  const decimal=/KG|LT|L/i.test(r.unidade);
-  const val=prompt("Nova quantidade:",r.quantidade);
-  if(val===null) return;
-  const num=decimal?parseFloat(val):parseInt(val);
-  if(isNaN(num)) return;
-  sb.from("requisicoes").update({quantidade:num}).eq("id",id).then(carregar);
+function editarQtd(id){
+ const r=dados.find(d=>d.id===id);
+ const decimal=/KG|L|LT/i.test(r.unidade);
+ const v=prompt("Nova quantidade:",r.quantidade);
+ if(v===null) return;
+ const n=decimal?parseFloat(v):parseInt(v);
+ if(isNaN(n)) return;
+ sb.from("requisicoes").update({quantidade:n}).eq("id",id);
+ r.quantidade=n;
+ render(dados);
 }
 
 carregar();
