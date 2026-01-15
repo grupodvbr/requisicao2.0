@@ -7,16 +7,19 @@
 <meta name="viewport"
 content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 
+<meta name="theme-color" content="#1e40af">
+<link rel="manifest" href="/manifest.json">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
 *{box-sizing:border-box}
+html,body{margin:0;padding:0;touch-action:manipulation}
 body{
-  margin:0;
   font-family:Inter,Arial;
-  background:#eef2ff;
+  background:linear-gradient(180deg,#eef2ff,#f8fafc);
   display:flex;
   justify-content:center;
   padding:12px;
@@ -34,6 +37,7 @@ body{
   justify-content:space-between;
   align-items:center;
 }
+.topbar h1{margin:0;font-size:18px;font-weight:800}
 .btn-logout{
   background:#fee2e2;
   color:#991b1b;
@@ -53,6 +57,7 @@ input,select,textarea{
   font-size:15px;
 }
 input[readonly]{background:#f1f5f9}
+textarea{min-height:80px;resize:none}
 button{
   width:100%;
   padding:14px;
@@ -60,10 +65,23 @@ button{
   border:none;
   border-radius:16px;
   font-weight:800;
+  font-size:15px;
   cursor:pointer;
+  position:relative;
 }
 .btn-primary{background:#2563eb;color:#fff}
 .btn-muted{background:#e5e7eb}
+button.loading{pointer-events:none}
+button.loading::after{
+  content:"Enviando…";
+  position:absolute;inset:0;
+  background:rgba(0,0,0,.35);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:16px;
+}
 #camera{
   display:none;
   width:100%;
@@ -71,6 +89,7 @@ button{
   background:#000;
   border-radius:18px;
   margin-top:12px;
+  overflow:hidden;
 }
 #camera video{width:100%;height:100%;object-fit:cover}
 .badge{
@@ -85,10 +104,10 @@ button{
 }
 .list{
   background:#fff;
-  border:1px solid #ddd;
-  border-radius:10px;
-  margin-top:6px;
-  max-height:220px;
+  border-radius:12px;
+  border:1px solid #e5e7eb;
+  margin-top:8px;
+  max-height:180px;
   overflow:auto;
 }
 .item{
@@ -108,6 +127,7 @@ th,td{
   padding:8px;
   text-align:center;
 }
+th{background:#f1f5f9}
 .hidden{display:none}
 </style>
 </head>
@@ -116,7 +136,7 @@ th,td{
 <div class="container">
 
 <div class="topbar">
-  <h2>📋 Requisição</h2>
+  <h1>📋 Requisição</h1>
   <button class="btn-logout" id="btnLogout">Sair</button>
 </div>
 
@@ -137,20 +157,18 @@ th,td{
   <option>Bar</option>
 </select>
 
-<label>Modo de busca</label>
+<label>Forma de busca</label>
 <select id="modoBusca">
   <option value="barcode">Código de barras</option>
-  <option value="nome">Nome do produto</option>
   <option value="id">ID do produto</option>
+  <option value="nome">Nome do produto</option>
 </select>
 
-<label>Buscar produto</label>
-<input id="busca">
+<input id="busca" placeholder="Buscar produto">
+
 <div id="lista" class="list hidden"></div>
 
-<button class="btn-muted" id="btnManual">Buscar</button>
-<button class="btn-primary" id="btnCamera">Abrir câmera</button>
-
+<button class="btn-muted" id="btnCamera">Abrir câmera</button>
 <div id="camera"></div>
 
 <label>Produto</label>
@@ -158,7 +176,7 @@ th,td{
 <div id="unidadeBox"></div>
 
 <label>Quantidade</label>
-<input type="number" id="quantidade" step="0.01">
+<input type="number" id="quantidade" min="1">
 
 <label>Observações</label>
 <textarea id="observacoes"></textarea>
@@ -168,17 +186,14 @@ th,td{
 <h3>Histórico (7 dias)</h3>
 <table>
 <thead>
-<tr><th>Produto</th><th>Qtd</th><th>Un</th><th>Status</th></tr>
+<tr>
+<th>Produto</th><th>Qtd</th><th>Un</th><th>Status</th><th>Ação</th>
+</tr>
 </thead>
 <tbody id="historico"></tbody>
 </table>
 
 </div>
-
-<audio id="beep">
-<source src="data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA">
-</audio>
-
 </div>
 
 <script>
@@ -188,120 +203,118 @@ const sb=supabase.createClient(
 );
 
 const normalizar=c=>"0"+String(c).replace(/\D/g,"");
-let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
-let unidadeAuto="",barcodeFinal="";
 
-setor.value=localStorage.getItem("setor")||setor.value;
-setor.onchange=()=>localStorage.setItem("setor",setor.value);
+let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
+let produtoAtual=null, unidadeAtual="", barcodeAtual="";
+let enviando=false;
 
 btnLogin.onclick=async()=>{
  const {data}=await sb.from("usuarios")
- .select("*").eq("usuario",usuario.value).eq("senha",senha.value).eq("ativo",true).single();
+ .select("*").eq("usuario",usuario.value).eq("senha",senha.value).single();
  if(!data)return;
  localStorage.setItem("usuario",JSON.stringify(data.usuario));
- location.reload();
+ init();
 };
 
-if(usuarioLogado){
+function init(){
  loginArea.classList.add("hidden");
  appArea.classList.remove("hidden");
  carregarHistorico();
 }
+if(usuarioLogado)init();
 
 btnLogout.onclick=()=>{localStorage.clear();location.reload();};
 
-busca.onkeyup=async()=>{
- if(modoBusca.value!=="nome")return;
- if(busca.value.length<2){lista.classList.add("hidden");return;}
- const r=await fetch(`/api/produtos-busca?q=${busca.value}`);
- const j=await r.json();
- lista.innerHTML="";
- (j.items||[]).forEach(p=>{
-  const d=document.createElement("div");
-  d.className="item";
-  d.textContent=`${p.id} - ${p.descricao}`;
-  d.onclick=()=>carregarProdutoDetalhe(p.id);
-  lista.appendChild(d);
- });
- lista.classList.remove("hidden");
-};
-
-async function carregarProdutoDetalhe(id){
- const r=await fetch(`/api/produto-detalhe?id=${id}`);
- const p=await r.json();
- produto.value=p.descricao;
- unidadeAuto=p.unidadeDeVenda;
- unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
- lista.classList.add("hidden");
-}
-
-btnManual.onclick=async()=>{
- if(modoBusca.value==="barcode"){
-  buscarBarcode(normalizar(busca.value));
- }
- if(modoBusca.value==="id"){
-  carregarProdutoDetalhe(busca.value);
- }
-};
-
-async function buscarBarcode(code){
- barcodeFinal=code;
+async function buscarPorBarcode(code){
  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
  const j=await r.json();
  if(j?.produto){
   produto.value=j.produto.descricao;
-  unidadeAuto=j.produto.unidadeDeVenda;
-  unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
-  beep.play();
-  fecharCamera();
+  unidadeAtual=j.produto.unidadeDeVenda;
+  unidadeBox.innerHTML=`<div class="badge">${unidadeAtual}</div>`;
+  barcodeAtual=code;
  }
 }
+
+async function buscarPorId(id){
+ const r=await fetch(`/api/produto?id=${id}`);
+ const j=await r.json();
+ produto.value=j.descricao;
+ unidadeAtual=j.unidadeDeVenda;
+ unidadeBox.innerHTML=`<div class="badge">${unidadeAtual}</div>`;
+}
+
+async function buscarPorNome(q){
+ if(q.length<2)return;
+ const r=await fetch(`/api/produtos-busca?q=${q}`);
+ const j=await r.json();
+ lista.innerHTML="";
+ lista.classList.remove("hidden");
+ j.items.forEach(p=>{
+  const d=document.createElement("div");
+  d.className="item";
+  d.textContent=p.descricao;
+  d.onclick=()=>buscarPorId(p.id);
+  lista.appendChild(d);
+ });
+}
+
+busca.oninput=()=>{
+ if(modoBusca.value==="nome")buscarPorNome(busca.value);
+};
 
 btnCamera.onclick=()=>{
  camera.style.display="block";
  Quagga.init({
   inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
-  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+  decoder:{readers:["ean_reader","ean_8_reader","upc_reader"]}
  },()=>Quagga.start());
- Quagga.onDetected(r=>buscarBarcode(normalizar(r.codeResult.code)));
+ Quagga.onDetected(r=>{
+  buscarPorBarcode(normalizar(r.codeResult.code));
+  Quagga.stop();camera.style.display="none";
+ });
 };
 
-function fecharCamera(){
- Quagga.stop();
- camera.style.display="none";
-}
-
 btnEnviar.onclick=async()=>{
- if(!produto.value||!quantidade.value)return;
+ if(enviando||!produto.value)return;
+ enviando=true;btnEnviar.classList.add("loading");
  await sb.from("requisicoes").insert({
   usuario:usuarioLogado,
   setor:setor.value,
   produto:produto.value,
-  unidade:unidadeAuto,
+  unidade:unidadeAtual,
   quantidade:quantidade.value,
   observacoes:observacoes.value,
-  barcode:barcodeFinal,
+  barcode:barcodeAtual,
   status:"PENDENTE"
  });
+ btnEnviar.classList.remove("loading");enviando=false;
  produto.value="";quantidade.value="";observacoes.value="";unidadeBox.innerHTML="";
  carregarHistorico();
 };
 
 async function carregarHistorico(){
  historico.innerHTML="";
- const seteDias=new Date(Date.now()-7*86400000).toISOString();
+ const d=new Date(Date.now()-7*86400000).toISOString();
  const {data}=await sb.from("requisicoes")
- .select("*").eq("usuario",usuarioLogado)
- .gte("created_at",seteDias).order("created_at",{ascending:false});
- (data||[]).forEach(r=>{
-  historico.innerHTML+=`
-   <tr>
-    <td>${r.produto}</td>
-    <td>${r.quantidade}</td>
-    <td>${r.unidade}</td>
-    <td>${r.status}</td>
-   </tr>`;
+ .select("*").eq("usuario",usuarioLogado).gte("created_at",d)
+ .order("created_at",{ascending:false});
+ data.forEach(r=>{
+  const h=(Date.now()-new Date(r.created_at))/3600000;
+  historico.insertAdjacentHTML("beforeend",`
+  <tr id="r-${r.id}">
+   <td>${r.produto}</td>
+   <td>${r.quantidade}</td>
+   <td>${r.unidade}</td>
+   <td>${r.status}</td>
+   <td>${h<=1?`<button onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
+  </tr>`);
  });
+}
+
+async function excluir(id){
+ const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
+ if(data)document.getElementById("r-"+id)?.remove();
 }
 </script>
 </body>
