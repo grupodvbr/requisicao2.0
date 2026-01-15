@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Consulta Produto - Ficha Completa (Debug Total)</title>
+
+<style>
+* { box-sizing: border-box; font-family: Inter, Arial, sans-serif; }
+body { background:#f4f6f8; padding:40px; color:#111; }
+
+h1 { margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+
+input {
+  padding:14px;
+  width:260px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  font-size:16px;
+}
+
+button {
+  padding:14px 22px;
+  border-radius:10px;
+  border:none;
+  background:#ff6a00;
+  color:#fff;
+  font-size:16px;
+  cursor:pointer;
+}
+
+button:hover { opacity:.9 }
+
+.section {
+  margin-top:30px;
+}
+
+pre {
+  background:#0b1220;
+  color:#e5e7eb;
+  padding:20px;
+  border-radius:14px;
+  overflow:auto;
+  font-size:13px;
+}
+
+.error {
+  background:#fee2e2;
+  color:#991b1b;
+  padding:16px;
+  border-radius:12px;
+  margin-top:20px;
+}
+
+.card {
+  background:#fff;
+  border-radius:18px;
+  padding:30px;
+  margin-top:30px;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);
+}
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:16px;
+  margin-top:20px;
+}
+
+.item {
+  background:#f8fafc;
+  border-radius:12px;
+  padding:14px;
+  font-size:14px;
+}
+
+.item b { display:block; color:#475569; margin-bottom:4px; }
+
+.badge {
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  background:#e2e8f0;
+}
+
+.title {
+  font-size:24px;
+  font-weight:700;
+}
+
+.subtitle {
+  margin-top:6px;
+  color:#64748b;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📦 Consulta de Produto — Ficha Completa</h1>
+
+<input id="idProduto" placeholder="Digite o ID do produto">
+<button onclick="buscarProduto()">Buscar</button>
+
+<div id="msg"></div>
+
+<div class="section">
+  <h2>🧪 Debug em tempo real</h2>
+  <pre id="debug"></pre>
+</div>
+
+<div id="produto"></div>
+
+<script>
+async function buscarProduto() {
+  const id = document.getElementById('idProduto').value.trim();
+  const debug = document.getElementById('debug');
+  const produtoDiv = document.getElementById('produto');
+  const msg = document.getElementById('msg');
+
+  debug.textContent = "";
+  produtoDiv.innerHTML = "";
+  msg.innerHTML = "";
+
+  try {
+    debug.textContent += "🔐 GERANDO TOKEN...\n\n";
+
+    const authResp = await fetch("/api/auth");
+    const authRaw = await authResp.text();
+
+    debug.textContent += "AUTH RAW:\n" + authRaw + "\n\n";
+
+    const auth = JSON.parse(authRaw);
+    const token = auth.accessToken;
+
+    if (!token) throw new Error("Token não retornado");
+
+    debug.textContent += "✅ TOKEN GERADO:\n" + token + "\n\n";
+
+    const urlProduto = `/api/produto?id=${id}`;
+
+    debug.textContent += "📦 CHAMANDO PRODUTO:\n";
+    debug.textContent += urlProduto + "\n\n";
+    debug.textContent += "AUTH HEADER:\n" + token + "\n\n";
+
+    const prodResp = await fetch(urlProduto, {
+      headers: { Authorization: token }
+    });
+
+    const prodRaw = await prodResp.text();
+
+    debug.textContent += "📥 PRODUTO RAW:\n" + prodRaw + "\n";
+
+    const json = JSON.parse(prodRaw);
+
+    if (!json.items || !json.items.length) {
+      msg.innerHTML = `<div class="error">Produto não encontrado</div>`;
+      return;
+    }
+
+    const p = json.items[0];
+
+    const renderField = (label, value) => `
+      <div class="item">
+        <b>${label}</b>
+        <div>${value === "" ? "-" : value}</div>
+      </div>
+    `;
+
+    produtoDiv.innerHTML = `
+      <div class="card">
+        <div class="title">${p.descricao}</div>
+        <div class="subtitle">${p.descricaoReduzida}</div>
+
+        <div class="grid">
+          ${renderField("ID", p.id)}
+          ${renderField("Grupo ID", p.grupoId)}
+          ${renderField("Subgrupo ID", p.subgrupoId)}
+          ${renderField("Seção ID", p.secaoId)}
+          ${renderField("NCM", p.ncmId)}
+          ${renderField("CEST", p.cest)}
+          ${renderField("Unidade de Venda", p.unidadeDeVenda)}
+          ${renderField("Unidade de Compra", p.unidadeDeCompra)}
+          ${renderField("Unidade Transferência", p.unidadeDeTransferencia)}
+          ${renderField("Validade", p.validade)}
+          ${renderField("Produção", p.producao)}
+          ${renderField("Finalidade", p.finalidadeProduto)}
+          ${renderField("Tabela", p.tabelaA)}
+          ${renderField("Preço Variável", p.precoVariavel ? "Sim" : "Não")}
+          ${renderField("Controla Estoque", p.controlaEstoque ? "Sim" : "Não")}
+          ${renderField("Controla Validade", p.controlaValidade ? "Sim" : "Não")}
+          ${renderField("Envia Balança", p.enviaBalanca ? "Sim" : "Não")}
+          ${renderField("Peso Variável", p.pesoVariavel)}
+          ${renderField("Permite Desconto", p.permiteDesconto ? "Sim" : "Não")}
+          ${renderField("Frente de Loja", p.frenteLoja ? "Sim" : "Não")}
+          ${renderField("Ativo Ecommerce", p.ativoNoEcommerce ? "Sim" : "Não")}
+          ${renderField("Data Inclusão", p.dataInclusao)}
+          ${renderField("Última Alteração", p.dataAlteracao)}
+          ${renderField("Impostos Federais", p.itensImpostosFederais.map(i => i.id).join(", "))}
+          ${renderField("Bloqueado Compra", p.bloqueadoCompra ? "Sim" : "Não")}
+        </div>
+
+        <div class="section">
+          <h3>📦 JSON COMPLETO DO PRODUTO</h3>
+          <pre>${JSON.stringify(p, null, 2)}</pre>
+        </div>
+      </div>
+    `;
+
+  } catch (err) {
+    msg.innerHTML = `<div class="error">ERRO: ${err.message}</div>`;
+    debug.textContent += "\n❌ ERRO:\n" + err.message;
+  }
+}
+</script>
+
+</body>
+</html>

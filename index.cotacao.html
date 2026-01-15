@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <title>Requisições Delícia V2 • Cotação</title>
+  <style>
+    :root{
+      --bg:#f3f4f6; --card:#fff; --ink:#111827; --muted:#6b7280;
+      --line:#e5e7eb; --blue:#2563eb; --blue-2:#1d4ed8; --green:#16a34a; --red:#dc2626;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
+    /* header */
+    header{position:sticky;top:0;z-index:10;background:var(--card);border-bottom:2px solid var(--line);
+      padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    header img{height:36px}
+    header h1{font-size:1.05rem;margin:0;font-weight:600}
+    header .pill{margin-left:auto;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;
+      padding:4px 10px;border-radius:999px;font-size:.8rem}
+    header a{margin-left:8px;text-decoration:none;border:1px solid var(--blue);color:var(--blue);
+      padding:6px 10px;border-radius:6px}
+    header a:hover{background:#eff6ff}
+    /* container */
+    .wrap{max-width:1200px;margin:18px auto;padding:0 14px}
+    .toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+    .toolbar .hint{color:var(--muted);font-size:.9rem}
+    .btn-primary{background:var(--blue);border:none;color:#fff;border-radius:8px;padding:9px 14px;cursor:pointer}
+    .btn-primary:hover{background:var(--blue-2)}
+    .kpis{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+    .kpi{flex:1;min-width:180px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+    .kpi b{font-size:1.4rem}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px}
+    table{width:100%;border-collapse:collapse;font-size:.9rem}
+    thead{position:sticky;top:88px;background:var(--blue);color:#fff;z-index:5}
+    th,td{border:1px solid var(--line);padding:10px;text-align:center}
+    td input{width:100%;padding:6px;border:1px solid #d1d5db;border-radius:6px;font-size:.9rem}
+    .muted{color:var(--muted)}
+    /* modal */
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}
+    .modal{width:min(1020px,100%);max-height:90vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.25)}
+    .modal header{display:flex;align-items:center;gap:10px;padding:12px;border-bottom:1px solid var(--line)}
+    .modal .content{padding:14px}
+    .stepper{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+    .step{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:#f3f4f6;font-size:.85rem}
+    .step.active{background:#dbeafe;color:#1e3a8a;border-color:#93c5fd;font-weight:600}
+    .grid{display:grid;gap:12px}
+    .cols-2{grid-template-columns:1fr 1fr}
+    .footer{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px;display:flex;justify-content:flex-end;gap:10px}
+    .btn{padding:8px 12px;border-radius:8px;border:1px solid var(--line);cursor:pointer;background:#fff}
+    .btn-danger{background:var(--red);border:none;color:#fff}
+    .btn-success{background:var(--green);border:none;color:#fff}
+    .toast{position:fixed;right:16px;bottom:16px;background:#111;color:#fff;padding:10px 14px;border-radius:8px;display:none;z-index:60}
+    @media(max-width:720px){thead{top:140px}.cols-2{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" alt="logo">
+    <h1>REQUISIÇÕES DELÍCIA V2 • Cotação</h1>
+    <span class="pill">somente itens com status <b>NO CARRINHO</b></span>
+    <a href="index.html">⬅ Voltar</a>
+  </header>
+
+  <div class="wrap">
+    <div class="toolbar">
+      <span class="hint">Edite <b>Quantidade</b> e <b>Unidade</b> na tabela abaixo antes de iniciar a cotação.</span>
+      <button id="btnIniciar" class="btn-primary">💲 Iniciar Cotação</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="muted">Itens no carrinho</div><b id="kpiItens">0</b></div>
+      <div class="kpi"><div class="muted">Fornecedores selecionados</div><b id="kpiForn">0</b></div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">Produto</th>
+            <th>Quantidade</th>
+            <th>Unidade</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyCarrinho">
+          <tr><td colspan="4" class="muted">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WIZARD -->
+  <div class="backdrop" id="wiz">
+    <div class="modal">
+      <header>
+        <img src="https://static.wixstatic.com/media/d830b0_8cec50a98bbf4775814dbfa5386585e8~mv2.png" height="30">
+        <h3 style="margin:0;font-weight:600">Assistente de Cotação</h3>
+      </header>
+      <div class="content">
+        <div class="stepper">
+          <div id="s1" class="step active">1 • Selecionar Empresas</div>
+          <div id="s2" class="step">2 • Montar Tabela</div>
+          <div id="s3" class="step">3 • Revisar & Salvar</div>
+        </div>
+
+        <!-- Step 1 -->
+        <section id="step1">
+          <div class="grid cols-2">
+            <div class="card" style="padding:12px">
+              <b>Empresas cadastradas</b>
+              <div id="listaFornecedores" style="margin-top:8px;display:grid;gap:6px"></div>
+            </div>
+            <div class="card" style="padding:12px">
+              <b>Cadastrar novo fornecedor</b>
+              <div class="grid cols-2" style="margin-top:8px">
+                <input id="fornRazao" type="text" placeholder="Razão Social">
+                <input id="fornFantasia" type="text" placeholder="Nome Fantasia">
+              </div>
+              <input id="fornCNPJ" type="text" placeholder="CNPJ ou CPF" maxlength="18" style="margin-top:8px">
+              <button id="btnAddFornecedor" class="btn-success" style="margin-top:8px;width:100%">+ Adicionar</button>
+              <div class="muted" style="font-size:.85rem;margin-top:6px">Será salvo na aba <b>Fornecedores</b>.</div>
+              <hr style="margin:12px 0">
+              <b>Selecionadas</b>
+              <div id="selecionadas" style="margin-top:8px" class="muted">Nenhuma selecionada.</div>
+            </div>
+          </div>
+          <div class="footer">
+            <button class="btn btn-danger" id="fechar">Cancelar</button>
+            <button class="btn" id="go2">Continuar ➜</button>
+          </div>
+        </section>
+
+        <!-- Step 2 -->
+        <section id="step2" style="display:none">
+          <div class="card" style="padding:0;overflow:auto">
+            <table id="tbCotacao">
+              <thead id="cotHead"></thead>
+              <tbody id="cotBody"></tbody>
+              <tfoot id="cotFoot"></tfoot>
+            </table>
+          </div>
+          <div class="muted" style="margin:8px 0">Preencha os <b>Preços Unit.</b> por fornecedor. Totais calculados automaticamente.</div>
+          <div class="footer">
+            <button class="btn" id="back1">⬅ Voltar</button>
+            <button class="btn" id="go3">Continuar ➜</button>
+          </div>
+        </section>
+
+        <!-- Step 3 -->
+        <section id="step3" style="display:none">
+          <div class="grid cols-2">
+            <div class="card" style="padding:12px">
+              <b>Resumo da Cotação</b>
+              <div id="resumoCotacao" style="margin-top:8px"></div>
+            </div>
+            <div class="card" style="padding:12px">
+              <b>Observações</b>
+              <textarea id="obsCotacao" rows="6" style="width:100%;border:1px solid #d1d5db;border-radius:8px;padding:8px;margin-top:8px"></textarea>
+            </div>
+          </div>
+          <div class="footer">
+            <button class="btn" id="back2">⬅ Voltar</button>
+            <button class="btn-success" id="salvar">💾 Salvar Cotação</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const endpoint = 'https://script.google.com/macros/s/AKfycbwUBrCygmGrs3x2EMdGn49fKWk7SkmljOXsEtdzbj-i1o4RcixLe5bVNCI5KvHAQUEkaQ/exec';
+
+    // Estado
+    let itens = [];                // itens no carrinho
+    let fornecedores = [];         // [{razao,fantasia,cnpj}]
+    let fornecedoresSel = [];      // [nome fantasia ou razao]
+    let precos = {};               // { fornecedor: { rowIndex: preco } }
+    let tabelaPronta = false;
+
+    // Helpers
+    const $ = s => document.querySelector(s);
+    const $$ = s => document.querySelectorAll(s);
+    const toast = (m,ms=2200)=>{const t=$("#toast");t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',ms)};
+    const money = v => isFinite(v)?v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—';
+
+    // Máscara CPF/CNPJ
+    $("#fornCNPJ")?.addEventListener('input', e=>{
+      let v = e.target.value.replace(/\D/g,'');
+      if(v.length<=11){
+        v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+      }else{
+        v = v.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
+             .replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d{1,2})$/,'$1-$2');
+      }
+      e.target.value = v.slice(0,18);
+    });
+
+    // Carregar itens NO CARRINHO
+    async function carregarItens(){
+      try{
+        const r = await fetch(`${endpoint}?acao=ler`);
+        const data = await r.json();
+        itens = (data||[]).map((l,i)=>({
+          idx:i+2, item:l[1], unidade:(l[2]||'UND'), qtd:+(l[3]||0),
+          status:(l[7]||'').toUpperCase().trim()
+        })).filter(x=>x.status==='NO CARRINHO');
+        renderItens();
+      }catch(e){ console.error(e); toast('Falha ao carregar itens.'); }
+    }
+
+    function renderItens(){
+      const tb = $("#tbodyCarrinho"); tb.innerHTML = '';
+      if(!itens.length){ tb.innerHTML='<tr><td colspan="4" class="muted">Nenhum item NO CARRINHO.</td></tr>'; }
+      itens.forEach((it,i)=>{
+        tb.insertAdjacentHTML('beforeend',`
+          <tr>
+            <td style="text-align:left">${it.item}</td>
+            <td><input type="number" step="0.01" value="${it.qtd}" data-i="${i}" class="qtd"></td>
+            <td><input type="text" value="${it.unidade}" data-i="${i}" class="und"></td>
+            <td><button class="btn btn-danger" data-i="${i}">🗑 Remover</button></td>
+          </tr>`);
+      });
+      $$(".qtd").forEach(el=>el.oninput= e=> itens[+e.target.dataset.i].qtd = +e.target.value);
+      $$(".und").forEach(el=>el.oninput= e=> itens[+e.target.dataset.i].unidade = String(e.target.value||'UND').toUpperCase());
+      $$("button.btn-danger").forEach(b=> b.onclick = e=> { itens.splice(+e.target.dataset.i,1); renderItens(); } );
+      $("#kpiItens").textContent = itens.length;
+    }
+
+    // Wizard
+    const abrirWizard = ()=> { if(!itens.length) return toast('Sem itens no carrinho.'); $("#wiz").style.display='flex'; goto(1); carregarFornecedores(); };
+    const fecharWizard = ()=> $("#wiz").style.display='none';
+    function goto(n){
+      ['s1','s2','s3'].forEach((id,i)=> $("#"+id).classList.toggle('active',i+1===n));
+      ['step1','step2','step3'].forEach(id=> $("#"+id).style.display='none');
+      $("#step"+n).style.display='block';
+    }
+
+    async function carregarFornecedores(){
+      try{
+        const r = await fetch(endpoint,{method:'POST',body:JSON.stringify({action:'listar_fornecedores'})});
+        fornecedores = await r.json() || [];
+      }catch{ fornecedores=[]; }
+      renderFornecedores();
+    }
+
+    function renderFornecedores(){
+      const box = $("#listaFornecedores"); box.innerHTML='';
+      fornecedores.forEach(f=>{
+        const nome = f.fantasia || f.razao || 'Sem nome';
+        const cnpj = f.cnpj ? ` <small class="muted">(${f.cnpj})</small>` : '';
+        const checked = fornecedoresSel.includes(nome);
+        const id = 'forn_'+btoa(unescape(encodeURIComponent(nome))).replace(/=/g,'');
+        box.insertAdjacentHTML('beforeend',`
+          <label for="${id}" style="display:flex;align-items:center;gap:8px">
+            <input id="${id}" type="checkbox" ${checked?'checked':''} data-nome="${nome}">
+            <span>${nome}${cnpj}</span>
+          </label>`);
+      });
+      box.querySelectorAll('input[type=checkbox]').forEach(chk=>{
+        chk.onchange = e=>{
+          const nome = e.target.dataset.nome;
+          if(e.target.checked){ if(!fornecedoresSel.includes(nome)) fornecedoresSel.push(nome); }
+          else{ fornecedoresSel = fornecedoresSel.filter(n=>n!==nome); }
+          $("#kpiForn").textContent = fornecedoresSel.length;
+          renderSelecionadas();
+        };
+      });
+      renderSelecionadas();
+    }
+
+    function renderSelecionadas(){
+      $("#selecionadas").innerHTML = fornecedoresSel.length
+        ? fornecedoresSel.map(n=>`<span style="display:inline-block;background:#eef2ff;border:1px solid #c7d2fe;padding:4px 8px;border-radius:999px;margin:2px">${n}</span>`).join('')
+        : '<span class="muted">Nenhuma selecionada.</span>';
+      $("#kpiForn").textContent = fornecedoresSel.length;
+    }
+
+    async function adicionarFornecedor(){
+      const razao = $("#fornRazao").value.trim();
+      const fantasia = ($("#fornFantasia").value||'').trim() || razao;
+      const cnpj = $("#fornCNPJ").value.trim();
+      if(!razao || !fantasia || !cnpj) return toast('Preencha Razão, Fantasia e CNPJ/CPF.');
+      try{
+        await fetch(endpoint,{method:'POST',body:JSON.stringify({action:'adicionar_fornecedor', razao, fantasia, cnpj})});
+        toast('Fornecedor cadastrado!');
+        $("#fornRazao").value = $("#fornFantasia").value = $("#fornCNPJ").value = '';
+        carregarFornecedores();
+        if(!fornecedoresSel.includes(fantasia)) fornecedoresSel.push(fantasia);
+        renderSelecionadas();
+      }catch(e){ console.error(e); toast('Erro ao cadastrar fornecedor.'); }
+    }
+
+    // Tabela de cotação
+    function construirTabela(){
+      if(!fornecedoresSel.length){ toast('Selecione ao menos uma empresa.'); return false; }
+      precos = {}; fornecedoresSel.forEach(f=> precos[f] = {});
+      const head = `
+        <tr>
+          <th style="text-align:left;min-width:220px">Produto</th>
+          <th style="min-width:90px">Qtd</th>
+          <th style="min-width:80px">Unid.</th>
+          ${fornecedoresSel.map(f=>`<th style="min-width:120px">Preço Unit.<br><small>${f}</small></th>`).join('')}
+          <th style="min-width:120px">Menor Total</th>
+        </tr>`;
+      $("#cotHead").innerHTML = head;
+      $("#cotBody").innerHTML = '';
+      itens.forEach((it,ri)=>{
+        const cols = fornecedoresSel.map((f,ci)=>`<td><input type="number" step="0.01" data-f="${f}" data-r="${ri}" class="preco"></td>`).join('');
+        $("#cotBody").insertAdjacentHTML('beforeend',`
+          <tr>
+            <td style="text-align:left">${it.item}</td>
+            <td><input type="number" step="0.01" value="${it.qtd}" data-r="${ri}" class="qtd2"></td>
+            <td><input type="text" value="${it.unidade}" data-r="${ri}" class="und2"></td>
+            ${cols}
+            <td id="best_${ri}">—</td>
+          </tr>`);
+      });
+      $("#cotFoot").innerHTML = `<tr><th colspan="3" style="text-align:right">Total por fornecedor:</th>${fornecedoresSel.map((_,i)=>`<th id="sum_${i}">—</th>`).join('')}<th id="sum_best">—</th></tr>`;
+
+      // Listeners
+      $$(".preco").forEach(inp=> inp.oninput = e=>{
+        const f = e.target.dataset.f, r = +e.target.dataset.r, v = +e.target.value||0;
+        precos[f][r] = v; recalcular();
+      });
+      $$(".qtd2").forEach(inp=> inp.oninput = e=>{ itens[+e.target.dataset.r].qtd = +e.target.value||0; recalcular(); });
+      $$(".und2").forEach(inp=> inp.oninput = e=>{ itens[+e.target.dataset.r].unidade = (e.target.value||'UND').toUpperCase(); });
+      tabelaPronta = true; recalcular(); return true;
+    }
+
+    function recalcular(){
+      if(!tabelaPronta) return;
+      const colTotals = fornecedoresSel.map(()=>0);
+      itens.forEach((it,ri)=>{
+        let best = Infinity;
+        fornecedoresSel.forEach((f,ci)=>{
+          const pu = +precos[f][ri]||0;
+          const tot = pu * (+it.qtd||0);
+          colTotals[ci] += tot;
+          if(tot>0 && tot<best) best = tot;
+        });
+        $("#best_"+ri).textContent = isFinite(best)? money(best) : '—';
+      });
+      colTotals.forEach((v,i)=> $("#sum_"+i).textContent = money(v) );
+      $("#sum_best").textContent = money(colTotals.reduce((a,b)=>a+b,0));
+      if($("#step3").style.display!=='none') resumo();
+    }
+
+    function resumo(){
+      const box = $("#resumoCotacao"); box.innerHTML='';
+      fornecedoresSel.forEach(f=>{
+        let soma = 0;
+        itens.forEach((it,ri)=> soma += (+precos[f][ri]||0) * (+it.qtd||0) );
+        box.insertAdjacentHTML('beforeend',`
+          <div style="display:flex;justify-content:space-between;border-bottom:1px dashed #e5e7eb;padding:6px 0">
+            <span>${f}</span><b>${money(soma)}</b>
+          </div>`);
+      });
+      if(!box.innerHTML) box.innerHTML = '<span class="muted">Sem preços informados.</span>';
+    }
+
+    async function salvar(){
+      const payload = {
+        criado_em: new Date().toISOString(),
+        fornecedores: fornecedoresSel.slice(),
+        itens: itens.map((it,ri)=>({
+          item: it.item, unidade: it.unidade, qtd: +it.qtd||0,
+          precos: Object.fromEntries(fornecedoresSel.map(f=> [f, +precos[f][ri]||0]))
+        })),
+        obs: $("#obsCotacao").value||''
+      };
+      try{
+        const r = await fetch(endpoint,{method:'POST',body:JSON.stringify({action:'salvar_cotacao', cotacao:payload})});
+        if(!r.ok) throw new Error('erro');
+        toast('Cotação salva com sucesso!');
+        fecharWizard();
+      }catch(e){ console.error(e); toast('Não foi possível salvar agora.'); }
+    }
+
+    /* Eventos principais */
+    $("#btnIniciar").onclick = abrirWizard;
+    $("#fechar").onclick = fecharWizard;
+    $("#btnAddFornecedor").onclick = adicionarFornecedor;
+    $("#go2").onclick = ()=>{ if(!fornecedoresSel.length) return toast('Selecione ao menos uma empresa.'); goto(2); construirTabela(); };
+    $("#back1").onclick = ()=> goto(1);
+    $("#go3").onclick = ()=>{ if(!tabelaPronta) return toast('Monte a tabela primeiro.'); goto(3); resumo(); };
+    $("#back2").onclick = ()=> goto(2);
+    $("#salvar").onclick = salvar;
+
+    // start
+    carregarItens();
+  </script>
+</body>
+</html>

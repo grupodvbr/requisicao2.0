@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Requisição de Compras – DELÍCIA GOURMET</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<style>
+body{
+  font-family:Arial, sans-serif;
+  background:#f5f5f5;
+  display:flex;
+  justify-content:center;
+  padding:20px;
+}
+.container{
+  background:#fff;
+  border-radius:12px;
+  box-shadow:0 0 15px rgba(0,0,0,.1);
+  max-width:540px;
+  width:100%;
+  padding:22px;
+}
+h2{text-align:center;margin-bottom:20px}
+label{display:block;margin:12px 0 6px;font-weight:bold}
+input,select,textarea{
+  width:100%;
+  padding:12px;
+  border:1px solid #ccc;
+  border-radius:6px;
+  font-size:16px;
+}
+input[readonly]{background:#f1f5f9}
+textarea{resize:vertical;min-height:70px}
+button{
+  width:100%;
+  padding:14px;
+  margin:8px 0;
+  border:none;
+  border-radius:6px;
+  font-weight:bold;
+  font-size:16px;
+  cursor:pointer;
+}
+.btn-blue{background:#2196F3;color:#fff}
+.btn-dark{background:#0f172a;color:#fff}
+.btn-red{background:#f44336;color:#fff}
+
+#camera{
+  width:100%;
+  height:260px;
+  background:#000;
+  border-radius:10px;
+  margin-top:10px;
+  overflow:hidden;
+}
+#camera video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.badge{
+  display:inline-block;
+  padding:6px 12px;
+  background:#e0f2fe;
+  color:#0369a1;
+  border-radius:999px;
+  font-weight:bold;
+  margin-top:6px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+  font-size:14px;
+}
+th,td{
+  border:1px solid #ddd;
+  padding:6px;
+  text-align:center;
+}
+
+pre{
+  background:#020617;
+  color:#e5e7eb;
+  padding:12px;
+  border-radius:8px;
+  font-size:12px;
+  max-height:260px;
+  overflow:auto;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h2>📋 Requisição de Compras<br>DELÍCIA GOURMET</h2>
+
+<label>Solicitante</label>
+<select id="solicitante">
+  <option value="">Selecione</option>
+  <option>ADM</option>
+  <option>Dheure</option>
+  <option>Marcelo</option>
+</select>
+
+<label>Setor</label>
+<select id="setor">
+  <option value="">Selecione</option>
+  <option>Cozinha</option>
+  <option>Limpeza</option>
+  <option>Bar</option>
+</select>
+
+<hr>
+
+<label>Código de Barras</label>
+<input id="barcode" placeholder="Digite ou escaneie o código">
+
+<button class="btn-dark" id="btnManual">🔍 Pesquisar manualmente</button>
+<button class="btn-blue" id="btnCamera">📷 Ler com a câmera</button>
+
+<div id="camera"></div>
+
+<label>Produto</label>
+<input id="item" readonly placeholder="Produto será preenchido automaticamente">
+
+<div id="unidadeBox"></div>
+
+<label>Quantidade</label>
+<input type="number" id="quantidade" min="1">
+
+<label>Observações</label>
+<textarea id="observacoes"></textarea>
+
+<button id="btnEnviar" class="btn-blue">ENVIAR ITEM</button>
+<button class="btn-red" onclick="limparTabela()">LIMPAR HISTÓRICO</button>
+
+<h3>Histórico</h3>
+<table id="historico">
+<tr>
+  <th>Produto</th>
+  <th>Unidade</th>
+  <th>Qtd</th>
+  <th>Setor</th>
+  <th>Hora</th>
+  <th>Status</th>
+</tr>
+</table>
+
+<h3>🧪 DEBUG (tudo que acontece)</h3>
+<pre id="debug"></pre>
+
+</div>
+
+<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
+
+<script>
+const URL_GAS="https://script.google.com/macros/s/AKfycbyXFEAq56G7oQdeCzGw_SdOnQ7XkRPMzBoS1V09Pkk_wI916FGO9nn4e9FfeNmv8KV9KA/exec";
+
+const debugEl=document.getElementById("debug");
+const unidadeBox=document.getElementById("unidadeBox");
+const cameraEl=document.getElementById("camera");
+
+let lendo=false;
+let buscando=false;
+let ultimoCodigo=null;
+let unidadeAuto="";
+let enviados=JSON.parse(localStorage.getItem("enviados"))||[];
+
+function log(t){
+  console.log(t);
+  debugEl.textContent+=t+"\n";
+  debugEl.scrollTop=debugEl.scrollHeight;
+}
+
+/* 🔢 NORMALIZA (SEMPRE 0 À ESQUERDA) */
+function normalizarCodigo(c){
+  c=String(c).replace(/\D/g,"");
+  return c.length>=13?c:"0"+c;
+}
+
+/* 🔍 BUSCA MANUAL */
+btnManual.onclick=()=>{
+  const c=barcode.value.trim();
+  if(!c) return;
+  buscarProduto(normalizarCodigo(c));
+};
+
+/* 📷 CAMERA – iPhone + Android */
+btnCamera.onclick=()=>{
+  if(lendo) return;
+  lendo=true;
+  log("📷 Abrindo câmera");
+
+  Quagga.init({
+    inputStream:{
+      type:"LiveStream",
+      target:cameraEl,
+      constraints:{facingMode:"environment"}
+    },
+    decoder:{
+      readers:[
+        "ean_reader",
+        "ean_8_reader",
+        "upc_reader",
+        "code_128_reader"
+      ]
+    },
+    locate:true
+  },err=>{
+    if(err){
+      log("❌ ERRO CAMERA: "+err.message);
+      lendo=false;
+      return;
+    }
+    Quagga.start();
+    log("✅ Câmera ativa");
+  });
+
+  Quagga.offDetected();
+  Quagga.onDetected(res=>{
+    if(buscando) return;
+    const raw=res.codeResult?.code;
+    if(!raw) return;
+
+    const code=normalizarCodigo(raw);
+    if(code===ultimoCodigo) return;
+    ultimoCodigo=code;
+
+    buscarProduto(code);
+  });
+};
+
+/* 🔎 BUSCAR PRODUTO */
+async function buscarProduto(code){
+  buscando=true;
+  barcode.value=code;
+  log("🔍 Buscando: "+code);
+
+  try{
+    const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+    const j=await r.json();
+
+    log("📦 API RESPONSE:");
+    log(JSON.stringify(j,null,2));
+
+    if(!j.produto){
+      log("❌ Produto não encontrado");
+      return;
+    }
+
+    item.value=j.produto.descricao.trim();
+    unidadeAuto=j.produto.unidadeDeVenda||"";
+
+    unidadeBox.innerHTML=`<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
+
+    if(lendo){
+      Quagga.stop();
+      lendo=false;
+      log("🛑 Câmera parada");
+    }
+
+  }catch(e){
+    log("❌ ERRO: "+e.message);
+  }finally{
+    buscando=false;
+  }
+}
+
+/* 📤 ENVIO */
+btnEnviar.onclick=()=>{
+  if(!item.value||!quantidade.value) return;
+
+  enviados.push({
+    item:item.value,
+    unidade:unidadeAuto,
+    quantidade:quantidade.value,
+    setor:setor.value,
+    hora:new Date().toLocaleTimeString(),
+    status:"Enviado"
+  });
+
+  atualizarTabela();
+
+  fetch(URL_GAS,{
+    method:"POST",
+    body:JSON.stringify({
+      acao:"cadastrar",
+      item:item.value,
+      unidade:unidadeAuto,
+      quantidade:quantidade.value,
+      setor:setor.value,
+      solicitante:solicitante.value,
+      observacoes:observacoes.value
+    })
+  });
+};
+
+function atualizarTabela(){
+  historico.innerHTML=`<tr>
+    <th>Produto</th><th>Unidade</th><th>Qtd</th>
+    <th>Setor</th><th>Hora</th><th>Status</th>
+  </tr>`;
+  enviados.forEach(i=>{
+    const r=historico.insertRow();
+    Object.values(i).forEach(v=>r.insertCell().innerText=v);
+  });
+  localStorage.setItem("enviados",JSON.stringify(enviados));
+}
+
+function limparTabela(){
+  enviados=[];
+  atualizarTabela();
+}
+
+atualizarTabela();
+</script>
+
+</body>
+</html>

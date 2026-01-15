@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Requisição de Mercadoria</title>
+<style>
+body{font-family:Arial;background:#f4f6f8;padding:30px}
+input,button{padding:10px}
+button{background:#ff6a00;color:#fff;border:0;cursor:pointer}
+.list{background:#fff;margin-top:10px;border-radius:8px}
+.item{padding:10px;border-bottom:1px solid #eee;cursor:pointer}
+.item:hover{background:#f1f5f9}
+.card{background:#fff;padding:20px;border-radius:10px;margin-top:20px}
+pre{background:#020617;color:#e5e7eb;padding:15px;border-radius:8px}
+.error{background:#fee2e2;padding:10px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<h1>📦 Requisição de Mercadoria</h1>
+
+<input id="busca" placeholder="Buscar produto pelo nome">
+<div id="lista" class="list"></div>
+
+<div id="produto"></div>
+<pre id="debug"></pre>
+
+<script>
+let produtoSelecionado = null;
+const debug = document.getElementById("debug");
+
+async function buscar() {
+  const q = document.getElementById("busca").value;
+  if (q.length < 2) return;
+
+  debug.textContent = "🔍 BUSCANDO...\n";
+
+  const r = await fetch(`/api/produtos-busca?q=${q}`);
+  const j = await r.json();
+
+  debug.textContent += JSON.stringify(j, null, 2);
+
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+if (!j.items || !Array.isArray(j.items)) {
+  debug.textContent += "\n⚠️ Nenhum item retornado";
+  return;
+}
+
+j.items.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.textContent = `${p.id} - ${p.descricao}`;
+    div.onclick = () => carregarProduto(p.id);
+    lista.appendChild(div);
+  });
+}
+
+async function carregarProduto(id) {
+  debug.textContent = "📦 CARREGANDO PRODUTO...\n";
+
+  const r = await fetch(`/api/produto-detalhe?id=${id}`);
+  const p = await r.json();
+
+  produtoSelecionado = p;
+
+  document.getElementById("produto").innerHTML = `
+    <div class="card">
+      <h2>${p.descricao}</h2>
+      <p>ID: ${p.id}</p>
+      <p>Unidade: ${p.unidadeDeVenda}</p>
+      <p>Estoque: ${p.controlaEstoque}</p>
+      <button onclick="enviar()">Enviar Requisição</button>
+    </div>
+  `;
+
+  debug.textContent += JSON.stringify(p, null, 2);
+}
+
+async function enviar() {
+  const body = {
+    dataTransferencia: new Date().toISOString().slice(0,10),
+    dataRecebimento: new Date().toISOString().slice(0,10),
+    tipo: "TRANSFERENCIA",
+    status: "ABERTA",
+    modelo: "DIRETA",
+    lojaId: 1,
+    localOrigemId: 1,
+    localDestinoId: 1,
+    setorId: 1,
+    solicitanteId: 112,
+    motivoRequisicaoId: 1,
+    observacaoGeral: "Gerado via sistema",
+    total: 1,
+    itens: [{
+      produtoId: produtoSelecionado.id,
+      quantidadeTransferida: 1,
+      observacao: "",
+      custoMedio: 0,
+      custo: 0,
+      custoReposicao: 0,
+      custoFiscal: 0
+    }]
+  };
+
+  debug.textContent += "\n🚀 ENVIANDO REQUISIÇÃO...\n";
+  debug.textContent += JSON.stringify(body, null, 2);
+
+  const r = await fetch("/api/requisicao", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  const t = await r.text();
+  debug.textContent += "\nRESPOSTA:\n" + t;
+}
+
+document.getElementById("busca").addEventListener("keyup", buscar);
+</script>
+
+</body>
+</html>
