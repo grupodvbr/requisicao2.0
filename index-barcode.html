@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Requisição de Compras – Delícia Gourmet</title>
+<title>Requisição de Compras • Delícia Gourmet</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#2563eb">
@@ -24,8 +24,8 @@ body{
 }
 .container{
   background:#fff;
-  border-radius:20px;
-  box-shadow:0 16px 40px rgba(0,0,0,.15);
+  border-radius:22px;
+  box-shadow:0 18px 45px rgba(0,0,0,.15);
   max-width:520px;
   width:100%;
   padding:22px;
@@ -34,12 +34,12 @@ body{
 h2{
   text-align:center;
   font-weight:800;
-  margin:4px 0 18px;
+  margin:6px 0 18px;
 }
 
 label{
   font-weight:700;
-  margin-top:12px;
+  margin-top:14px;
   display:block;
 }
 input,select,textarea{
@@ -47,7 +47,7 @@ input,select,textarea{
   padding:14px;
   margin-top:6px;
   border:1px solid #cbd5e1;
-  border-radius:12px;
+  border-radius:14px;
   font-size:15px;
 }
 input[readonly]{background:#f1f5f9}
@@ -56,9 +56,9 @@ textarea{min-height:80px}
 button{
   width:100%;
   padding:14px;
-  margin-top:10px;
+  margin-top:12px;
   border:none;
-  border-radius:14px;
+  border-radius:16px;
   font-weight:800;
   font-size:15px;
   cursor:pointer;
@@ -72,7 +72,7 @@ button{
   width:100%;
   height:260px;
   background:#000;
-  border-radius:16px;
+  border-radius:18px;
   margin-top:10px;
   overflow:hidden;
 }
@@ -86,22 +86,49 @@ button{
   display:inline-block;
   background:#e0f2fe;
   color:#0369a1;
-  padding:6px 14px;
+  padding:8px 16px;
   border-radius:999px;
   font-weight:800;
   margin-top:8px;
   font-size:13px;
 }
 
-.userbox{
+/* ===== PERFIL ===== */
+.profile{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  background:#f1f5f9;
-  padding:12px 16px;
-  border-radius:14px;
+  margin-bottom:14px;
+}
+.profile-name{
   font-weight:800;
-  margin-bottom:12px;
+  background:#f1f5f9;
+  padding:10px 16px;
+  border-radius:999px;
+  cursor:pointer;
+}
+.profile-menu{
+  display:none;
+  position:absolute;
+  right:22px;
+  top:68px;
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 12px 30px rgba(0,0,0,.15);
+  overflow:hidden;
+  z-index:10;
+}
+.profile-menu button{
+  background:none;
+  border:none;
+  padding:14px 18px;
+  font-weight:800;
+  cursor:pointer;
+  width:100%;
+  text-align:left;
+}
+.profile-menu button:hover{
+  background:#f1f5f9;
 }
 
 .overlay{
@@ -119,18 +146,18 @@ button{
 .alert{
   background:#dcfce7;
   color:#166534;
-  padding:12px;
-  border-radius:14px;
+  padding:14px;
+  border-radius:16px;
   text-align:center;
   font-weight:800;
-  margin-top:12px;
+  margin-top:14px;
   display:none;
 }
 
 table{
   width:100%;
   border-collapse:collapse;
-  margin-top:14px;
+  margin-top:16px;
   font-size:13px;
 }
 th,td{
@@ -142,16 +169,15 @@ th{
   background:#f1f5f9;
   font-weight:800;
 }
-.action-btn{
-  padding:6px 10px;
-  border-radius:8px;
-  font-weight:800;
-  cursor:pointer;
-  border:none;
-}
+
 .action-delete{
   background:#fee2e2;
   color:#991b1b;
+  border:none;
+  border-radius:10px;
+  padding:6px 12px;
+  font-weight:800;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -163,17 +189,16 @@ th{
 
 <h2>📋 Requisição de Compras</h2>
 
-<div id="userArea"></div>
+<!-- PERFIL -->
+<div id="profileArea"></div>
 
 <!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
   <input id="usuario">
-
   <label>Senha</label>
   <input id="senha" type="password">
-
-  <button class="btn-dark" id="btnLogin">🔐 Entrar</button>
+  <button class="btn-dark" id="btnLogin">Entrar</button>
 </div>
 
 <!-- APP -->
@@ -188,10 +213,10 @@ th{
 </select>
 
 <label>Código de Barras</label>
-<input id="barcode" placeholder="Digite ou escaneie">
+<input id="barcode">
 
-<button class="btn-muted" id="btnManual">🔍 Pesquisar manualmente</button>
-<button class="btn-primary" id="btnCamera">📷 Ler com a câmera</button>
+<button class="btn-muted" id="btnManual">Buscar manual</button>
+<button class="btn-primary" id="btnCamera">Ler com câmera</button>
 
 <div id="camera"></div>
 
@@ -206,21 +231,16 @@ th{
 <label>Observações</label>
 <textarea id="observacoes"></textarea>
 
-<button class="btn-primary" id="btnEnviar">ENVIAR REQUISIÇÃO</button>
+<button class="btn-primary" id="btnEnviar">Enviar requisição</button>
 
-<div class="alert" id="alerta">✅ Requisição enviada com sucesso</div>
+<div class="alert" id="alerta">Requisição enviada com sucesso</div>
 
-<h3>Histórico (últimos 7 dias)</h3>
+<h3>Histórico (7 dias)</h3>
 
 <table>
 <thead>
 <tr>
-<th>Produto</th>
-<th>Un.</th>
-<th>Qtd</th>
-<th>Setor</th>
-<th>Status</th>
-<th>Ação</th>
+<th>Produto</th><th>Un.</th><th>Qtd</th><th>Setor</th><th>Status</th><th>Ação</th>
 </tr>
 </thead>
 <tbody id="historico"></tbody>
@@ -237,116 +257,106 @@ th{
 </div>
 
 <script>
-/* ================== SUPABASE ================== */
-const SUPABASE_URL = "https://mybsriouiwqsdufujbsc.supabase.co";
-const SUPABASE_KEY = "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* ================= SUPABASE ================= */
+const sb = supabase.createClient(
+  "https://mybsriouiwqsdufujbsc.supabase.co",
+  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
+);
 
-/* ================== STATE ================== */
 let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
-let page = 0, limit = 10;
-let lendo = false;
-let unidadeAuto = "";
-let barcodeFinal = "";
-const beep = document.getElementById("beep");
+let page=0, limit=10;
+let lendo=false, unidadeAuto="", barcodeFinal="";
+const beep=document.getElementById("beep");
 
-/* ================== LOGIN ================== */
-btnLogin.onclick = async () => {
-  if(!usuario.value || !senha.value) return alert("Informe usuário e senha");
-
-  const { data } = await sb
-    .from("usuarios")
+/* ===== LOGIN ===== */
+btnLogin.onclick = async ()=>{
+  const {data} = await sb.from("usuarios")
     .select("*")
-    .eq("usuario", usuario.value)
-    .eq("senha", senha.value)
-    .eq("ativo", true)
+    .eq("usuario",usuario.value)
+    .eq("senha",senha.value)
+    .eq("ativo",true)
     .single();
 
   if(!data) return alert("Usuário ou senha inválidos");
 
-  localStorage.setItem("usuario", JSON.stringify(data.usuario));
+  localStorage.setItem("usuario",JSON.stringify(data.usuario));
   location.reload();
 };
 
+/* ===== PERFIL ===== */
 if(usuarioLogado){
-  loginArea.style.display = "none";
-  appArea.style.display = "block";
-  userArea.innerHTML = `
-    <div class="userbox">
-      👤 ${usuarioLogado}
-      <button class="btn-danger" onclick="logout()">Sair</button>
+  loginArea.style.display="none";
+  appArea.style.display="block";
+  profileArea.innerHTML=`
+    <div class="profile">
+      <div class="profile-name" onclick="toggleMenu()">👤 ${usuarioLogado}</div>
+      <div class="profile-menu" id="menuPerfil">
+        <button onclick="logout()">Sair</button>
+      </div>
     </div>`;
   carregarHistorico();
 }
 
+function toggleMenu(){
+  const m=document.getElementById("menuPerfil");
+  m.style.display = m.style.display==="block" ? "none" : "block";
+}
 function logout(){
   localStorage.removeItem("usuario");
   location.reload();
 }
 
-/* ================== BARCODE ================== */
+/* ===== BARCODE ===== */
 function normalizar(c){
-  return "0" + String(c).replace(/\D/g,"");
+  return "0"+String(c).replace(/\D/g,"");
 }
 
-/* ================== BUSCAR PRODUTO ================== */
+/* ===== BUSCAR PRODUTO ===== */
 async function buscarProduto(code){
-  barcodeFinal = code;
-  const r = await fetch(`/api/buscar-barcode?barcode=${code}`);
-  const j = await r.json();
+  barcodeFinal=code;
+  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+  const j=await r.json();
   if(!j.produto) return alert("Produto não encontrado");
 
-  produto.value = j.produto.descricao;
-  unidadeAuto = j.produto.unidadeDeVenda;
-  unidadeBox.innerHTML = `<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
+  produto.value=j.produto.descricao;
+  unidadeAuto=j.produto.unidadeDeVenda;
+  unidadeBox.innerHTML=`<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
   beep.play();
-
-  if(lendo){ Quagga.stop(); lendo=false; }
+  if(lendo){Quagga.stop();lendo=false;}
 }
 
-/* ================== MANUAL ================== */
-btnManual.onclick = () => {
-  if(barcode.value) buscarProduto(normalizar(barcode.value));
-};
+/* ===== MANUAL ===== */
+btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ================== CAMERA ================== */
-btnCamera.onclick = () => {
+/* ===== CAMERA ===== */
+btnCamera.onclick=()=>{
   if(lendo) return;
-  lendo = true;
-
+  lendo=true;
   Quagga.init({
-    inputStream:{
-      type:"LiveStream",
-      target:camera,
-      constraints:{ facingMode:"environment" }
-    },
-    decoder:{ readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"] },
+    inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
+    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]},
     locate:true
-  }, err => {
-    if(err) return alert("Erro ao acessar câmera");
+  },err=>{
+    if(err) return alert("Erro câmera");
     Quagga.start();
   });
-
-  Quagga.onDetected(r => buscarProduto(normalizar(r.codeResult.code)));
+  Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
 };
 
-/* ================== ENVIO ================== */
-btnEnviar.onclick = async () => {
-  if(!setor.value || !produto.value || !quantidade.value){
-    return alert("Preencha todos os campos");
-  }
-
+/* ===== ENVIO ===== */
+btnEnviar.onclick=async()=>{
+  if(!setor.value||!produto.value||!quantidade.value) return alert("Preencha tudo");
   overlay.style.display="flex";
 
   await sb.from("requisicoes").insert({
-    usuario: usuarioLogado,
-    setor: setor.value,
-    produto: produto.value,
-    unidade: unidadeAuto,
-    quantidade: quantidade.value,
-    observacoes: observacoes.value,
-    barcode: barcodeFinal,
-    status: "PENDENTE"
+    usuario:usuarioLogado,
+    setor:setor.value,
+    produto:produto.value,
+    unidade:unidadeAuto,
+    quantidade:quantidade.value,
+    observacoes:observacoes.value,
+    barcode:barcodeFinal,
+    status:"PENDENTE"
   });
 
   overlay.style.display="none";
@@ -354,54 +364,49 @@ btnEnviar.onclick = async () => {
   setTimeout(()=>alerta.style.display="none",3000);
 
   limparCampos();
-  page = 0;
+  page=0;
   historico.innerHTML="";
   carregarHistorico();
 };
 
-/* ================== HISTÓRICO ================== */
+/* ===== HISTÓRICO ===== */
 async function carregarHistorico(){
-  const seteDias = new Date(Date.now()-7*86400000).toISOString();
-
-  const { data } = await sb
-    .from("requisicoes")
+  const seteDias=new Date(Date.now()-7*86400000).toISOString();
+  const {data}=await sb.from("requisicoes")
     .select("*")
-    .eq("usuario", usuarioLogado)
-    .gte("created_at", seteDias)
-    .order("created_at", { ascending:false })
-    .range(page*limit, (page+1)*limit-1);
+    .eq("usuario",usuarioLogado)
+    .gte("created_at",seteDias)
+    .order("created_at",{ascending:false})
+    .range(page*limit,(page+1)*limit-1);
 
   data.forEach(r=>{
-    const diff = (Date.now() - new Date(r.created_at)) / 3600000;
-    historico.innerHTML += `
+    const horas=(Date.now()-new Date(r.created_at))/3600000;
+    historico.innerHTML+=`
       <tr>
         <td>${r.produto}</td>
         <td>${r.unidade}</td>
         <td>${r.quantidade}</td>
         <td>${r.setor}</td>
         <td>${r.status}</td>
-        <td>
-          ${diff <= 1 ? `<button class="action-btn action-delete" onclick="excluir('${r.id}')">Excluir</button>` : "-"}
-        </td>
+        <td>${horas<=1?`<button class="action-delete" onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
       </tr>`;
   });
 
-  btnMais.style.display = data.length === limit ? "block" : "none";
+  btnMais.style.display=data.length===limit?"block":"none";
   page++;
 }
+btnMais.onclick=carregarHistorico;
 
-btnMais.onclick = carregarHistorico;
-
-/* ================== EXCLUIR ================== */
+/* ===== EXCLUIR ===== */
 async function excluir(id){
-  if(!confirm("Deseja excluir esta requisição?")) return;
-  await sb.from("requisicoes").delete().eq("id", id);
+  if(!confirm("Excluir requisição?")) return;
+  await sb.from("requisicoes").delete().eq("id",id);
   historico.innerHTML="";
   page=0;
   carregarHistorico();
 }
 
-/* ================== UTIL ================== */
+/* ===== UTIL ===== */
 function limparCampos(){
   barcode.value="";
   produto.value="";
@@ -410,11 +415,10 @@ function limparCampos(){
   unidadeBox.innerHTML="";
 }
 
-/* ================== SERVICE WORKER ================== */
+/* ===== PWA ===== */
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("/service-worker.js");
 }
 </script>
-
 </body>
 </html>
