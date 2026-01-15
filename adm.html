@@ -41,7 +41,7 @@ header{
   border-bottom:1px solid #e5e7eb;
   position:sticky;
   top:0;
-  z-index:20;
+  z-index:30;
 }
 header h1{margin:0;font-size:18px;font-weight:800}
 header button{
@@ -92,7 +92,7 @@ header button{
   background:var(--card);
   position:sticky;
   top:64px;
-  z-index:15;
+  z-index:20;
 }
 .filtros input,.filtros select{
   padding:10px;
@@ -112,7 +112,7 @@ thead{
   color:#fff;
   position:sticky;
   top:150px;
-  z-index:10;
+  z-index:15;
 }
 th,td{
   padding:8px;
@@ -205,7 +205,9 @@ select.status{
 </div>
 
 <div class="filtros">
-  <input type="text" id="fItem" placeholder="Item / Obs">
+  <input type="date" id="fInicio">
+  <input type="date" id="fFim">
+  <input type="text" id="fItem" placeholder="Item / Observação">
   <select id="fStatus">
     <option value="PENDENTE" selected>PENDENTE</option>
     <option value="">TODOS</option>
@@ -215,20 +217,27 @@ select.status{
     <option>ENTREGUE</option>
     <option>SEM ESTOQUE</option>
   </select>
+  <select id="fSetor"></select>
+  <select id="fUsuario"></select>
 </div>
 
 <table>
 <thead>
 <tr>
+  <th>Data</th>
   <th>Produto</th>
   <th>Qtd</th>
   <th>Un</th>
+  <th>Setor</th>
+  <th>Solicitante</th>
+  <th>Obs</th>
   <th>Status</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
 
+<!-- MODAL PRODUTO -->
 <div class="modal" id="modalProduto">
   <div class="modal-box">
     <h3>Alterar produto</h3>
@@ -251,14 +260,50 @@ const sb=supabase.createClient(
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
+const listaEl=document.getElementById("lista");
 let dados=[],editandoId=null;
 
+/* LOAD */
 async function carregar(){
  const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
  dados=data||[];
- render(dados);
+ preencherFiltros();
+ filtrar();
 }
 
+/* FILTROS */
+function preencherFiltros(){
+ fSetor.innerHTML='<option value="">Todos Setores</option>';
+ fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
+ [...new Set(dados.map(d=>d.setor))].forEach(s=>s&&(fSetor.innerHTML+=`<option>${s}</option>`));
+ [...new Set(dados.map(d=>d.usuario))].forEach(u=>u&&(fUsuario.innerHTML+=`<option>${u}</option>`));
+}
+
+[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
+
+/* FILTRAR */
+function filtrar(){
+ let lista=[...dados];
+
+ if(!fInicio.value&&!fFim.value&&fStatus.value==="PENDENTE"){
+   lista=lista.filter(d=>d.status==="PENDENTE");
+ }
+
+ if(fStatus.value&&fStatus.value!=="PENDENTE")
+   lista=lista.filter(d=>d.status===fStatus.value);
+
+ if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
+ if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
+
+ if(fItem.value){
+  const t=fItem.value.toLowerCase();
+  lista=lista.filter(d=>d.produto.toLowerCase().includes(t)||(d.observacoes||"").toLowerCase().includes(t));
+ }
+
+ render(lista);
+}
+
+/* RENDER */
 function render(lista){
  listaEl.innerHTML="";
  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
@@ -267,9 +312,13 @@ function render(lista){
   c[r.status]++;
   listaEl.innerHTML+=`
   <tr>
+    <td>${new Date(r.created_at).toLocaleString()}</td>
     <td class="editavel" ondblclick="editarProduto('${r.id}')">${r.produto}</td>
     <td class="editavel" ondblclick="editarQtd('${r.id}')">${r.quantidade}</td>
     <td>${r.unidade}</td>
+    <td>${r.setor}</td>
+    <td>${r.usuario}</td>
+    <td>${r.observacoes||""}</td>
     <td>
       <select class="status" onchange="mudarStatus('${r.id}',this.value)">
         ${Object.keys(c).map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
@@ -278,14 +327,15 @@ function render(lista){
   </tr>`;
  });
 
- cP.textContent=c.PENDENTE;
- cC.textContent=c["NO CARRINHO"];
- cCO.textContent=c.COMPRADO;
- cN.textContent=c.NEGADO;
- cE.textContent=c.ENTREGUE;
- cSE.textContent=c["SEM ESTOQUE"];
+ cP.textContent=c.PENDENTE||0;
+ cC.textContent=c["NO CARRINHO"]||0;
+ cCO.textContent=c.COMPRADO||0;
+ cN.textContent=c.NEGADO||0;
+ cE.textContent=c.ENTREGUE||0;
+ cSE.textContent=c["SEM ESTOQUE"]||0;
 }
 
+/* STATUS */
 async function mudarStatus(id,status){
  await sb.from("requisicoes").update({status}).eq("id",id);
  const r=dados.find(d=>d.id===id);
@@ -293,6 +343,7 @@ async function mudarStatus(id,status){
  render(dados);
 }
 
+/* PRODUTO */
 function editarProduto(id){
  editandoId=id;
  modalProduto.style.display="flex";
@@ -329,6 +380,7 @@ async function confirmarProduto(){
  carregar();
 }
 
+/* QTD */
 function editarQtd(id){
  const r=dados.find(d=>d.id===id);
  const decimal=/KG|L|LT/i.test(r.unidade);
