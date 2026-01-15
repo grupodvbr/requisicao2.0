@@ -60,9 +60,6 @@ input,select,textarea{
 }
 input[readonly]{background:#f1f5f9}
 textarea{min-height:80px;resize:none}
-input:focus,select:focus,textarea:focus{
-  outline:none;border-color:#2563eb;
-}
 
 /* ===== BUTTONS ===== */
 button{
@@ -107,6 +104,14 @@ button.loading::after{
 }
 #camera video{width:100%;height:100%;object-fit:cover}
 
+#codigoLido{
+  margin-top:8px;
+  text-align:center;
+  font-weight:800;
+  font-size:14px;
+  color:#2563eb;
+}
+
 /* ===== BADGE ===== */
 .badge{
   display:inline-block;
@@ -119,29 +124,26 @@ button.loading::after{
   font-size:13px;
 }
 
-/* ===== PROFILE ===== */
-.profile{display:flex;justify-content:center;margin-bottom:14px}
-.profile-name{
-  background:#f1f5f9;
-  padding:10px 18px;
-  border-radius:999px;
-  font-weight:800;
-  cursor:pointer;
-}
-.profile-menu{
-  display:none;
-  position:absolute;
-  top:70px;right:22px;
+/* ===== MENU INFERIOR ===== */
+.menu-bottom{
+  position:fixed;
+  bottom:12px;
+  left:50%;
+  transform:translateX(-50%);
+  width:calc(100% - 24px);
+  max-width:520px;
   background:#fff;
-  border-radius:16px;
-  box-shadow:0 20px 40px rgba(0,0,0,.2);
-  overflow:hidden;
+  border-radius:20px;
+  box-shadow:0 15px 40px rgba(0,0,0,.2);
+  padding:12px;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  z-index:50;
 }
-.profile-menu button{
-  background:none;border:none;
-  padding:14px 20px;
-  font-weight:800;
-  width:100%;
+.menu-bottom button{
+  flex:1;
+  margin:0;
 }
 
 /* ===== HISTÓRICO ===== */
@@ -175,8 +177,6 @@ th{background:#f1f5f9}
 
 <h2>📋 Requisição de Compras</h2>
 
-<div id="profileArea"></div>
-
 <!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
@@ -198,13 +198,14 @@ th{background:#f1f5f9}
 </select>
 
 <label>Código de Barras</label>
-<input id="barcode">
+<input id="barcode" placeholder="Digite ou escaneie">
 
 <button class="btn-muted" id="btnManual">Buscar manual</button>
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
 <button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
 
 <div id="camera"></div>
+<div id="codigoLido"></div>
 
 <label>Produto</label>
 <input id="produto" readonly>
@@ -228,8 +229,10 @@ th{background:#f1f5f9}
 <tbody id="historico"></tbody>
 </table>
 
-<button class="btn-muted hidden" id="btnMais">Carregar mais</button>
+</div>
 
+<div class="menu-bottom hidden" id="menuBottom">
+  <button class="btn-muted" onclick="logout()">🚪 Sair</button>
 </div>
 
 <audio id="beep">
@@ -245,9 +248,8 @@ const sb = supabase.createClient(
 );
 
 let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
-let page=0,limit=10;
-let unidadeAuto="",barcodeFinal="";
-let enviando=false;
+let unidadeAuto="", barcodeFinal="";
+let lendo=false;
 
 /* LOGIN */
 btnLogin.onclick=async()=>{
@@ -257,7 +259,7 @@ btnLogin.onclick=async()=>{
     .eq("senha",senha.value)
     .eq("ativo",true)
     .single();
-  if(!data) return alert("Usuário inválido");
+  if(!data) return;
   localStorage.setItem("usuario",JSON.stringify(data.usuario));
   location.reload();
 };
@@ -265,38 +267,30 @@ btnLogin.onclick=async()=>{
 if(usuarioLogado){
   loginArea.classList.add("hidden");
   appArea.classList.remove("hidden");
-  profileArea.innerHTML=`
-    <div class="profile">
-      <div class="profile-name" onclick="toggleMenu()">👤 ${usuarioLogado}</div>
-      <div class="profile-menu" id="menuPerfil">
-        <button onclick="logout()">Sair</button>
-      </div>
-    </div>`;
+  menuBottom.classList.remove("hidden");
   carregarHistorico();
-}
-
-function toggleMenu(){
-  menuPerfil.style.display=menuPerfil.style.display==="block"?"none":"block";
-}
-function logout(){
-  localStorage.removeItem("usuario");
-  location.reload();
 }
 
 /* BARCODE */
 const normalizar=c=>"0"+String(c).replace(/\D/g,"");
 
-/* BUSCAR PRODUTO */
+/* BUSCAR PRODUTO (SEM ERRO VISUAL) */
 async function buscarProduto(code){
   barcodeFinal=code;
-  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
-  const j=await r.json();
-  if(!j.produto) return alert("Produto não encontrado");
-  produto.value=j.produto.descricao;
-  unidadeAuto=j.produto.unidadeDeVenda;
-  unidadeBox.innerHTML=`<div class="badge">📏 ${unidadeAuto}</div>`;
-  beep.play();
-  fecharCamera();
+  codigoLido.textContent=`Lendo código: ${code}`;
+
+  try{
+    const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+    const j=await r.json();
+
+    if(j && j.produto){
+      produto.value=j.produto.descricao;
+      unidadeAuto=j.produto.unidadeDeVenda;
+      unidadeBox.innerHTML=`<div class="badge">📏 ${unidadeAuto}</div>`;
+      document.getElementById("beep").play();
+      fecharCamera();
+    }
+  }catch(e){}
 }
 
 /* CAMERA */
@@ -304,12 +298,19 @@ btnOpenCamera.onclick=()=>{
   camera.style.display="block";
   btnOpenCamera.classList.add("hidden");
   btnCloseCamera.classList.remove("hidden");
+  codigoLido.textContent="";
+
   Quagga.init({
     inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
     decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
   },()=>Quagga.start());
-  Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
+
+  Quagga.onDetected(r=>{
+    const code=normalizar(r.codeResult.code);
+    buscarProduto(code);
+  });
 };
+
 function fecharCamera(){
   Quagga.stop();
   camera.style.display="none";
@@ -317,13 +318,13 @@ function fecharCamera(){
   btnCloseCamera.classList.add("hidden");
 }
 btnCloseCamera.onclick=fecharCamera;
+
 btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
 /* ENVIAR */
 btnEnviar.onclick=async()=>{
-  if(enviando) return;
-  if(!setor.value||!produto.value||!quantidade.value) return alert("Preencha tudo");
-  enviando=true;btnEnviar.classList.add("loading");
+  if(!setor.value||!produto.value||!quantidade.value) return;
+  btnEnviar.classList.add("loading");
   await sb.from("requisicoes").insert({
     usuario:usuarioLogado,
     setor:setor.value,
@@ -335,9 +336,9 @@ btnEnviar.onclick=async()=>{
     status:"PENDENTE"
   });
   btnEnviar.classList.remove("loading");
-  enviando=false;
   limparCampos();
-  historico.innerHTML="";page=0;carregarHistorico();
+  historico.innerHTML="";
+  carregarHistorico();
 };
 
 /* HISTÓRICO */
@@ -347,8 +348,7 @@ async function carregarHistorico(){
     .select("*")
     .eq("usuario",usuarioLogado)
     .gte("created_at",seteDias)
-    .order("created_at",{ascending:false})
-    .range(page*limit,(page+1)*limit-1);
+    .order("created_at",{ascending:false});
 
   data.forEach(r=>{
     const horas=(Date.now()-new Date(r.created_at))/3600000;
@@ -357,33 +357,27 @@ async function carregarHistorico(){
         <td>${r.produto}</td>
         <td>${r.quantidade}</td>
         <td>${r.status}</td>
-        <td>${horas<=1?`<button class="action-delete" onclick="excluir('${r.id}',this)">Excluir</button>`:"-"}</td>
+        <td>${horas<=1?`<button class="action-delete" onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
       </tr>`);
   });
-  btnMais.classList.toggle("hidden",data.length!==limit);
-  page++;
 }
-btnMais.onclick=carregarHistorico;
 
-/* EXCLUIR */
-async function excluir(id,btn){
-  if(!confirm("Excluir requisição?")) return;
-  btn.classList.add("loading");
+async function excluir(id){
   const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
-  if(!data){alert("Limite de 1 hora");btn.classList.remove("loading");return;}
-  document.getElementById("row-"+id).remove();
+  if(data) document.getElementById("row-"+id).remove();
 }
 
-/* UTIL */
 function limparCampos(){
-  barcode.value="";produto.value="";
-  quantidade.value="";observacoes.value="";
+  barcode.value="";
+  produto.value="";
+  quantidade.value="";
+  observacoes.value="";
   unidadeBox.innerHTML="";
 }
 
-/* PWA */
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("/service-worker.js");
+function logout(){
+  localStorage.removeItem("usuario");
+  location.reload();
 }
 </script>
 </body>
