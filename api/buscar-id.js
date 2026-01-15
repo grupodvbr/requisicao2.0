@@ -3,11 +3,15 @@ export default async function handler(req, res) {
   if (!id) return res.status(400).json({ error: "ID obrigatório" });
 
   try {
-    // 1. gera token
-    const authResp = await fetch(`${process.env.BASE_URL}/api/auth`);
+    // 1️⃣ GERA TOKEN (SEM ENV!)
+    const authResp = await fetch(`${req.headers.origin}/api/auth`);
     const auth = await authResp.json();
 
-    // 2. chama varejo fácil
+    if (!auth.accessToken) {
+      return res.status(500).json({ error: "Token não gerado" });
+    }
+
+    // 2️⃣ CHAMA VAREJO FÁCIL
     const url = `https://villachopp.varejofacil.com/api/v1/produto/produtos?q=id==${id}&start=0&count=1`;
 
     const response = await fetch(url, {
@@ -26,6 +30,9 @@ export default async function handler(req, res) {
     return res.status(200).json(JSON.parse(text));
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      error: "Erro interno buscar-id",
+      message: err.message
+    });
   }
 }
