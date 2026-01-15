@@ -405,7 +405,7 @@ buscaProdutoNome.onkeyup = async () => {
   const q = buscaProdutoNome.value.trim();
   if (q.length < 2) return;
 
-  const r = await fetch(`/api/requisicao?q=${encodeURIComponent(q)}`);
+  const r = await fetch(`/api/produtos-busca?q=${encodeURIComponent(q)}`);
   const j = await r.json();
 
   listaProdutos.innerHTML = "";
