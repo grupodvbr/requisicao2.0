@@ -126,7 +126,7 @@ pre{
 <div id="camera"></div>
 
 <label>Produto</label>
-<input id="item" readonly placeholder="Produto será preenchido automaticamente">
+<input id="item" readonly>
 
 <div id="unidadeBox"></div>
 
@@ -151,7 +151,7 @@ pre{
 </tr>
 </table>
 
-<h3>🧪 DEBUG (tudo que acontece)</h3>
+<h3>🧪 DEBUG</h3>
 <pre id="debug"></pre>
 
 </div>
@@ -177,20 +177,22 @@ function log(t){
   debugEl.scrollTop=debugEl.scrollHeight;
 }
 
-/* 🔢 NORMALIZA (SEMPRE 0 À ESQUERDA) */
+/* 🚨 REGRA ABSOLUTA: SEMPRE PREFIXA 0 */
 function normalizarCodigo(c){
-  c=String(c).replace(/\D/g,"");
-  return c.length>=13?c:"0"+c;
+  c = String(c).replace(/\D/g,"").trim();
+  return "0" + c;
 }
 
 /* 🔍 BUSCA MANUAL */
 btnManual.onclick=()=>{
   const c=barcode.value.trim();
   if(!c) return;
-  buscarProduto(normalizarCodigo(c));
+  const finalCode = normalizarCodigo(c);
+  log("➡️ Enviando para API: " + finalCode);
+  buscarProduto(finalCode);
 };
 
-/* 📷 CAMERA – iPhone + Android */
+/* 📷 CAMERA */
 btnCamera.onclick=()=>{
   if(lendo) return;
   lendo=true;
@@ -203,12 +205,7 @@ btnCamera.onclick=()=>{
       constraints:{facingMode:"environment"}
     },
     decoder:{
-      readers:[
-        "ean_reader",
-        "ean_8_reader",
-        "upc_reader",
-        "code_128_reader"
-      ]
+      readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]
     },
     locate:true
   },err=>{
@@ -227,11 +224,14 @@ btnCamera.onclick=()=>{
     const raw=res.codeResult?.code;
     if(!raw) return;
 
-    const code=normalizarCodigo(raw);
-    if(code===ultimoCodigo) return;
-    ultimoCodigo=code;
+    const finalCode = normalizarCodigo(raw);
+    if(finalCode===ultimoCodigo) return;
+    ultimoCodigo=finalCode;
 
-    buscarProduto(code);
+    log("📸 Código lido: "+raw);
+    log("➡️ Enviando para API: "+finalCode);
+
+    buscarProduto(finalCode);
   });
 };
 
@@ -239,7 +239,6 @@ btnCamera.onclick=()=>{
 async function buscarProduto(code){
   buscando=true;
   barcode.value=code;
-  log("🔍 Buscando: "+code);
 
   try{
     const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
