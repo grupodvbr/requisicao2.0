@@ -4,11 +4,7 @@
 <meta charset="UTF-8">
 <title>Painel de Requisições • Delícia Gourmet</title>
 
-<meta name="viewport"
-content="width=device-width,
-initial-scale=1.0,
-maximum-scale=1.0,
-user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -37,7 +33,7 @@ body{
   color:var(--ink);
 }
 
-/* ===== HEADER ===== */
+/* HEADER */
 header{
   display:flex;
   justify-content:space-between;
@@ -49,11 +45,7 @@ header{
   top:0;
   z-index:20;
 }
-header h1{
-  margin:0;
-  font-size:18px;
-  font-weight:800;
-}
+header h1{margin:0;font-size:18px;font-weight:800}
 header button{
   border:none;
   background:var(--primary);
@@ -64,7 +56,7 @@ header button{
   cursor:pointer;
 }
 
-/* ===== RESUMO ===== */
+/* RESUMO */
 .resumo{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
@@ -87,7 +79,7 @@ header button{
   border-radius:999px;
 }
 
-/* ===== FILTROS ===== */
+/* FILTROS */
 .filtros{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
@@ -106,7 +98,7 @@ header button{
   font-size:13px;
 }
 
-/* ===== TABELA ===== */
+/* TABELA */
 table{
   width:100%;
   border-collapse:collapse;
@@ -124,39 +116,21 @@ th,td{
   border:1px solid #e5e7eb;
   font-size:13px;
   text-align:center;
-  vertical-align:middle;
 }
 td.obs{
   text-align:left;
   font-size:12px;
   color:var(--muted);
 }
-
-/* ===== STATUS ===== */
 select.status{
   padding:6px;
   border-radius:8px;
   font-weight:700;
 }
 
-/* ===== BOTÕES ===== */
-.btn{
-  padding:6px 10px;
-  border-radius:8px;
-  border:none;
-  cursor:pointer;
-  font-weight:800;
-  font-size:12px;
-}
-.btn-entregue{background:var(--success);color:#fff}
-.btn-negado{background:var(--danger);color:#fff}
-
-/* ===== RESPONSIVO ===== */
 @media(max-width:720px){
   th:nth-child(7),
-  td:nth-child(7){
-    display:none;
-  }
+  td:nth-child(7){display:none;}
 }
 </style>
 </head>
@@ -168,7 +142,6 @@ select.status{
   <button onclick="toggleTema()">🌙 Tema</button>
 </header>
 
-<!-- RESUMO -->
 <div class="resumo">
   <div class="card">PENDENTE <span id="cP">0</span></div>
   <div class="card">NO CARRINHO <span id="cC">0</span></div>
@@ -178,7 +151,6 @@ select.status{
   <div class="card">SEM ESTOQUE <span id="cSE">0</span></div>
 </div>
 
-<!-- FILTROS -->
 <div class="filtros">
   <input type="date" id="fInicio">
   <input type="date" id="fFim">
@@ -196,7 +168,6 @@ select.status{
   <select id="fUsuario"></select>
 </div>
 
-<!-- TABELA -->
 <table>
 <thead>
 <tr>
@@ -219,52 +190,53 @@ const sb = supabase.createClient(
   "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-let dados=[];
+const listaEl = document.getElementById("lista");
+let dados = [];
 
 function toggleTema(){
   document.body.classList.toggle("dark");
 }
 
-/* ===== CARREGAR ===== */
+/* CARREGAR */
 async function carregar(){
   const {data} = await sb
     .from("requisicoes")
     .select("*")
     .order("created_at",{ascending:false});
 
-  dados=data||[];
+  dados = data || [];
   preencherFiltros();
   filtrar();
 }
 
-/* ===== FILTROS ===== */
+/* FILTROS */
 function preencherFiltros(){
   fSetor.innerHTML='<option value="">Todos Setores</option>';
-  [...new Set(dados.map(d=>d.setor))].forEach(s=>{
-    if(s) fSetor.innerHTML+=`<option>${s}</option>`;
-  });
+  [...new Set(dados.map(d=>d.setor))].forEach(s=>s && (fSetor.innerHTML+=`<option>${s}</option>`));
 
   fUsuario.innerHTML='<option value="">Todos Solicitantes</option>';
-  [...new Set(dados.map(d=>d.usuario))].forEach(u=>{
-    if(u) fUsuario.innerHTML+=`<option>${u}</option>`;
-  });
+  [...new Set(dados.map(d=>d.usuario))].forEach(u=>u && (fUsuario.innerHTML+=`<option>${u}</option>`));
 }
 
-[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>{
-  el.oninput=filtrar;
-});
+[fInicio,fFim,fItem,fStatus,fSetor,fUsuario].forEach(el=>el.oninput=filtrar);
 
-/* ===== FILTRAR ===== */
+/* FILTRAR */
 function filtrar(){
-  let lista=[...dados];
+  let lista = [...dados];
 
-  if(fStatus.value) lista=lista.filter(d=>d.status===fStatus.value);
-  if(fSetor.value) lista=lista.filter(d=>d.setor===fSetor.value);
-  if(fUsuario.value) lista=lista.filter(d=>d.usuario===fUsuario.value);
+  if(!fInicio.value && !fFim.value && fStatus.value==="PENDENTE"){
+    lista = lista.filter(d=>d.status==="PENDENTE");
+  }
+
+  if(fStatus.value && fStatus.value!=="PENDENTE")
+    lista = lista.filter(d=>d.status===fStatus.value);
+
+  if(fSetor.value) lista = lista.filter(d=>d.setor===fSetor.value);
+  if(fUsuario.value) lista = lista.filter(d=>d.usuario===fUsuario.value);
 
   if(fItem.value){
     const t=fItem.value.toLowerCase();
-    lista=lista.filter(d=>
+    lista = lista.filter(d =>
       d.produto.toLowerCase().includes(t) ||
       (d.observacoes||"").toLowerCase().includes(t)
     );
@@ -273,31 +245,29 @@ function filtrar(){
   render(lista);
 }
 
-/* ===== RENDER ===== */
+/* RENDER */
 function render(lista){
-  lista.innerHTML="";
-  let c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
-
   listaEl.innerHTML="";
+  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
+
   lista.forEach(r=>{
     c[r.status]=(c[r.status]||0)+1;
-
     listaEl.innerHTML+=`
-    <tr>
-      <td>${new Date(r.created_at).toLocaleString()}</td>
-      <td>${r.produto}</td>
-      <td>${r.quantidade}</td>
-      <td>${r.unidade}</td>
-      <td>${r.setor}</td>
-      <td>${r.usuario}</td>
-      <td class="obs">${r.observacoes||""}</td>
-      <td>
-        <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
-          ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
-            .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
-        </select>
-      </td>
-    </tr>`;
+      <tr>
+        <td>${new Date(r.created_at).toLocaleString()}</td>
+        <td>${r.produto}</td>
+        <td>${r.quantidade}</td>
+        <td>${r.unidade}</td>
+        <td>${r.setor}</td>
+        <td>${r.usuario}</td>
+        <td class="obs">${r.observacoes||""}</td>
+        <td>
+          <select class="status" onchange="atualizarStatus('${r.id}',this.value)">
+            ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
+              .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+          </select>
+        </td>
+      </tr>`;
   });
 
   cP.textContent=c.PENDENTE||0;
@@ -308,7 +278,7 @@ function render(lista){
   cSE.textContent=c["SEM ESTOQUE"]||0;
 }
 
-/* ===== STATUS ===== */
+/* STATUS */
 async function atualizarStatus(id,status){
   await sb.from("requisicoes").update({status}).eq("id",id);
   const r=dados.find(d=>d.id===id);
