@@ -396,23 +396,22 @@ async function carregarHistorico(){
   page++;
 }
 btnMais.onclick=carregarHistorico;
-
-async function excluir(id){
-  if(!confirm("Excluir requisição?")) return;
+async function excluir(id) {
+  if (!confirm("Excluir requisição?")) return;
 
   const { data, error } = await sb.rpc("excluir_requisicao", {
     p_id: id,
     p_usuario: usuarioLogado
   });
 
-  if(error){
+  if (error) {
     alert("Erro ao excluir");
     console.error(error);
     return;
   }
 
-  if(!data){
-    alert("❌ Você só pode excluir até 1 hora após o envio");
+  if (!data) {
+    alert("Você só pode excluir até 1 hora após o envio");
     return;
   }
 
@@ -420,6 +419,7 @@ async function excluir(id){
   page = 0;
   carregarHistorico();
 }
+
 
 /* ===== UTIL ===== */
 function limparCampos(){
