@@ -8,6 +8,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
 :root{
@@ -118,15 +119,9 @@ th,td{
   font-size:13px;
   text-align:center;
 }
-td.obs{
-  text-align:left;
-  font-size:12px;
-  color:var(--muted);
-  cursor:pointer;
-}
-td.editavel{
-  cursor:pointer;
-}
+td.obs{color:var(--muted)}
+td.editavel{cursor:pointer;font-weight:700}
+
 select.status{
   padding:6px;
   border-radius:8px;
@@ -137,7 +132,7 @@ select.status{
 .modal{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.5);
+  background:rgba(0,0,0,.6);
   display:none;
   align-items:center;
   justify-content:center;
@@ -148,7 +143,7 @@ select.status{
   padding:20px;
   border-radius:16px;
   width:90%;
-  max-width:400px;
+  max-width:420px;
 }
 .modal-box h3{margin-top:0}
 .modal-box input{
@@ -169,10 +164,20 @@ select.status{
 .btn-primary{background:var(--primary);color:#fff}
 .btn-muted{background:#e5e7eb}
 
-/* MOBILE */
-@media(max-width:720px){
-  th:nth-child(7),
-  td:nth-child(7){display:none;}
+/* CAMERA MODAL */
+#cameraModal{
+  width:100%;
+  height:220px;
+  background:#000;
+  border-radius:12px;
+  overflow:hidden;
+  display:none;
+}
+#codigoLido{
+  text-align:center;
+  font-weight:800;
+  margin-top:6px;
+  color:var(--primary);
 }
 </style>
 </head>
@@ -231,10 +236,17 @@ select.status{
   <div class="modal-box">
     <h3>Alterar produto</h3>
     <input id="novoBarcode" placeholder="Código de barras">
+    <button class="btn-muted" onclick="abrirCameraModal()">Abrir câmera</button>
+    <div id="cameraModal"></div>
+    <div id="codigoLido"></div>
     <button class="btn-primary" onclick="confirmarProduto()">Confirmar</button>
     <button class="btn-muted" onclick="fecharModal()">Cancelar</button>
   </div>
 </div>
+
+<audio id="beep">
+<source src="data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA">
+</audio>
 
 <script>
 const sb = supabase.createClient(
@@ -242,12 +254,11 @@ const sb = supabase.createClient(
   "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-const listaEl = document.getElementById("lista");
-let dados=[], editandoId=null;
+const listaEl=document.getElementById("lista");
+let dados=[],editandoId=null;
 
-function toggleTema(){
-  document.body.classList.toggle("dark");
-}
+/* TEMA */
+function toggleTema(){document.body.classList.toggle("dark");}
 
 /* LOAD */
 async function carregar(){
@@ -323,22 +334,47 @@ function editarProduto(id){
   editandoId=id;
   modalProduto.style.display="flex";
 }
-async function confirmarProduto(){
-  const code=novoBarcode.value;
-  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
-  const j=await r.json();
-  if(!j.produto) return;
-  await sb.from("requisicoes").update({
-    produto:j.produto.descricao,
-    unidade:j.produto.unidadeDeVenda,
-    barcode:code
-  }).eq("id",editandoId);
-  fecharModal();
-  carregar();
-}
 function fecharModal(){
   modalProduto.style.display="none";
   novoBarcode.value="";
+  fecharCameraModal();
+}
+
+/* CAMERA MODAL */
+function abrirCameraModal(){
+  cameraModal.style.display="block";
+  Quagga.init({
+    inputStream:{type:"LiveStream",target:cameraModal,constraints:{facingMode:"environment"}},
+    decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+  },()=>Quagga.start());
+
+  Quagga.onDetected(r=>{
+    const code="0"+r.codeResult.code.replace(/\D/g,"");
+    novoBarcode.value=code;
+    codigoLido.textContent=`Código: ${code}`;
+  });
+}
+function fecharCameraModal(){
+  if(Quagga) Quagga.stop();
+  cameraModal.style.display="none";
+  codigoLido.textContent="";
+}
+
+/* CONFIRMAR PRODUTO */
+async function confirmarProduto(){
+  const code=novoBarcode.value;
+  const {data}=await sb.from("produtos").select("*").eq("barcode",code).single();
+  if(!data) return;
+
+  await sb.from("requisicoes").update({
+    produto:data.descricao,
+    unidade:data.unidade,
+    barcode:code
+  }).eq("id",editandoId);
+
+  document.getElementById("beep").play();
+  fecharModal();
+  carregar();
 }
 
 /* QUANTIDADE */
