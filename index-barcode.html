@@ -31,13 +31,21 @@ body{
   max-width:520px;
   width:100%;
   padding:20px;
+  position:relative;
 }
+
+/* ===== TOPO ===== */
 .topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
+  margin-bottom:10px;
 }
-.topbar h1{margin:0;font-size:18px;font-weight:800}
+.topbar h1{
+  margin:0;
+  font-size:18px;
+  font-weight:800;
+}
 .btn-logout{
   background:#fee2e2;
   color:#991b1b;
@@ -46,7 +54,10 @@ body{
   border-radius:999px;
   font-weight:800;
   font-size:12px;
+  cursor:pointer;
 }
+
+/* ===== FORM ===== */
 label{font-weight:700;margin-top:14px;display:block}
 input,select,textarea{
   width:100%;
@@ -58,6 +69,7 @@ input,select,textarea{
 }
 input[readonly]{background:#f1f5f9}
 textarea{min-height:80px;resize:none}
+
 button{
   width:100%;
   padding:14px;
@@ -70,7 +82,9 @@ button{
   position:relative;
 }
 .btn-primary{background:#2563eb;color:#fff}
-.btn-muted{background:#e5e7eb}
+.btn-muted{background:#e5e7eb;color:#0f172a}
+
+/* overlay botão */
 button.loading{pointer-events:none}
 button.loading::after{
   content:"Enviando…";
@@ -82,6 +96,8 @@ button.loading::after{
   justify-content:center;
   border-radius:16px;
 }
+
+/* ===== CAMERA ===== */
 #camera{
   display:none;
   width:100%;
@@ -92,6 +108,16 @@ button.loading::after{
   overflow:hidden;
 }
 #camera video{width:100%;height:100%;object-fit:cover}
+
+#codigoLido{
+  margin-top:8px;
+  text-align:center;
+  font-weight:800;
+  font-size:14px;
+  color:#2563eb;
+}
+
+/* ===== BADGE ===== */
 .badge{
   display:inline-block;
   background:#e0f2fe;
@@ -102,20 +128,8 @@ button.loading::after{
   margin-top:10px;
   font-size:13px;
 }
-.list{
-  background:#fff;
-  border-radius:12px;
-  border:1px solid #e5e7eb;
-  margin-top:8px;
-  max-height:180px;
-  overflow:auto;
-}
-.item{
-  padding:10px;
-  border-bottom:1px solid #eee;
-  cursor:pointer;
-}
-.item:hover{background:#f1f5f9}
+
+/* ===== HISTÓRICO ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -128,7 +142,26 @@ th,td{
   text-align:center;
 }
 th{background:#f1f5f9}
+.btn-delete{
+  background:#fee2e2;
+  color:#991b1b;
+  border:none;
+  border-radius:10px;
+  padding:6px 10px;
+  font-weight:800;
+}
+
 .hidden{display:none}
+.btn-logout{
+  width:auto;              /* 🔥 ISSO resolve */
+  padding:6px 12px;        /* diminui altura */
+  margin:0;                /* remove espaçamento extra */
+  font-size:12px;
+  border-radius:999px;
+  background:#fee2e2;
+  color:#991b1b;
+}
+
 </style>
 </head>
 
@@ -137,9 +170,10 @@ th{background:#f1f5f9}
 
 <div class="topbar">
   <h1>📋 Requisição</h1>
-  <button class="btn-logout" id="btnLogout">Sair</button>
+<button class="btn-logout" id="btnLogout">Sair</button>
 </div>
 
+<!-- LOGIN -->
 <div id="loginArea">
   <label>Usuário</label>
   <input id="usuario">
@@ -148,6 +182,7 @@ th{background:#f1f5f9}
   <button class="btn-primary" id="btnLogin">Entrar</button>
 </div>
 
+<!-- APP -->
 <div id="appArea" class="hidden">
 
 <label>Setor</label>
@@ -157,22 +192,19 @@ th{background:#f1f5f9}
   <option>Bar</option>
 </select>
 
-<label>Forma de busca</label>
-<select id="modoBusca">
-  <option value="barcode">Código de barras</option>
-  <option value="id">ID do produto</option>
-  <option value="nome">Nome do produto</option>
-</select>
+<label>Código de Barras</label>
+<input id="barcode" placeholder="Digite ou escaneie">
 
-<input id="busca" placeholder="Buscar produto">
+<button class="btn-muted" id="btnManual">Buscar manual</button>
+<button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
+<button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
 
-<div id="lista" class="list hidden"></div>
-
-<button class="btn-muted" id="btnCamera">Abrir câmera</button>
 <div id="camera"></div>
+<div id="codigoLido"></div>
 
 <label>Produto</label>
 <input id="produto" readonly>
+
 <div id="unidadeBox"></div>
 
 <label>Quantidade</label>
@@ -183,20 +215,26 @@ th{background:#f1f5f9}
 
 <button class="btn-primary" id="btnEnviar">Enviar requisição</button>
 
-<h3>Histórico (7 dias)</h3>
+<h3 style="margin-top:20px">Histórico (7 dias)</h3>
 <table>
 <thead>
 <tr>
-<th>Produto</th><th>Qtd</th><th>Un</th><th>Status</th><th>Ação</th>
+<th>Produto</th><th>Qtd</th><th>Status</th><th>Ação</th>
 </tr>
 </thead>
 <tbody id="historico"></tbody>
 </table>
 
 </div>
+
+<audio id="beep">
+<source src="data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA">
+</audio>
+
 </div>
 
 <script>
+/* ===== SUPABASE ===== */
 const sb=supabase.createClient(
  "https://mybsriouiwqsdufujbsc.supabase.co",
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
@@ -204,117 +242,128 @@ const sb=supabase.createClient(
 
 const normalizar=c=>"0"+String(c).replace(/\D/g,"");
 
+/* ===== ESTADO ===== */
 let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
-let produtoAtual=null, unidadeAtual="", barcodeAtual="";
+let unidadeAuto="",barcodeFinal="";
 let enviando=false;
 
+/* ===== SETOR PERSISTENTE ===== */
+const setorEl=document.getElementById("setor");
+setorEl.value=localStorage.getItem("setor")||setorEl.value;
+setorEl.onchange=()=>localStorage.setItem("setor",setorEl.value);
+
+/* ===== LOGIN ===== */
 btnLogin.onclick=async()=>{
  const {data}=await sb.from("usuarios")
- .select("*").eq("usuario",usuario.value).eq("senha",senha.value).single();
- if(!data)return;
+ .select("*")
+ .eq("usuario",usuario.value)
+ .eq("senha",senha.value)
+ .eq("ativo",true)
+ .single();
+ if(!data) return;
  localStorage.setItem("usuario",JSON.stringify(data.usuario));
  init();
 };
 
+/* ===== INIT ===== */
 function init(){
  loginArea.classList.add("hidden");
  appArea.classList.remove("hidden");
+ btnLogout.classList.remove("hidden");
  carregarHistorico();
 }
-if(usuarioLogado)init();
+if(usuarioLogado) init();
 
-btnLogout.onclick=()=>{localStorage.clear();location.reload();};
-
-async function buscarPorBarcode(code){
- const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
- const j=await r.json();
- if(j?.produto){
-  produto.value=j.produto.descricao;
-  unidadeAtual=j.produto.unidadeDeVenda;
-  unidadeBox.innerHTML=`<div class="badge">${unidadeAtual}</div>`;
-  barcodeAtual=code;
- }
-}
-
-async function buscarPorId(id){
- const r=await fetch(`/api/produto?id=${id}`);
- const j=await r.json();
- produto.value=j.descricao;
- unidadeAtual=j.unidadeDeVenda;
- unidadeBox.innerHTML=`<div class="badge">${unidadeAtual}</div>`;
-}
-
-async function buscarPorNome(q){
- if(q.length<2)return;
- const r=await fetch(`/api/produtos-busca?q=${q}`);
- const j=await r.json();
- lista.innerHTML="";
- lista.classList.remove("hidden");
- j.items.forEach(p=>{
-  const d=document.createElement("div");
-  d.className="item";
-  d.textContent=p.descricao;
-  d.onclick=()=>buscarPorId(p.id);
-  lista.appendChild(d);
- });
-}
-
-busca.oninput=()=>{
- if(modoBusca.value==="nome")buscarPorNome(busca.value);
+/* ===== LOGOUT ===== */
+btnLogout.onclick=()=>{
+ localStorage.removeItem("usuario");
+ location.reload();
 };
 
-btnCamera.onclick=()=>{
+/* ===== BUSCAR PRODUTO (SEM ERRO VISUAL) ===== */
+async function buscarProduto(code){
+ barcodeFinal=code;
+ codigoLido.textContent=`Lendo código: ${code}`;
+ try{
+  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+  const j=await r.json();
+  if(j?.produto){
+   produto.value=j.produto.descricao;
+   unidadeAuto=j.produto.unidadeDeVenda;
+   unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
+   beep.play();
+   fecharCamera();
+  }
+ }catch{}
+}
+
+/* ===== CAMERA ===== */
+btnOpenCamera.onclick=()=>{
  camera.style.display="block";
+ btnOpenCamera.classList.add("hidden");
+ btnCloseCamera.classList.remove("hidden");
+ codigoLido.textContent="";
  Quagga.init({
   inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
-  decoder:{readers:["ean_reader","ean_8_reader","upc_reader"]}
+  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
  },()=>Quagga.start());
- Quagga.onDetected(r=>{
-  buscarPorBarcode(normalizar(r.codeResult.code));
-  Quagga.stop();camera.style.display="none";
- });
+ Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
 };
+btnCloseCamera.onclick=fecharCamera;
+function fecharCamera(){
+ Quagga.stop();
+ camera.style.display="none";
+ btnOpenCamera.classList.remove("hidden");
+ btnCloseCamera.classList.add("hidden");
+}
+btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
+/* ===== ENVIAR ===== */
 btnEnviar.onclick=async()=>{
- if(enviando||!produto.value)return;
- enviando=true;btnEnviar.classList.add("loading");
+ if(enviando||!produto.value||!quantidade.value)return;
+ enviando=true;
+ btnEnviar.classList.add("loading");
  await sb.from("requisicoes").insert({
   usuario:usuarioLogado,
-  setor:setor.value,
+  setor:setorEl.value,
   produto:produto.value,
-  unidade:unidadeAtual,
+  unidade:unidadeAuto,
   quantidade:quantidade.value,
   observacoes:observacoes.value,
-  barcode:barcodeAtual,
+  barcode:barcodeFinal,
   status:"PENDENTE"
  });
- btnEnviar.classList.remove("loading");enviando=false;
+ btnEnviar.classList.remove("loading");
+ enviando=false;
  produto.value="";quantidade.value="";observacoes.value="";unidadeBox.innerHTML="";
  carregarHistorico();
 };
 
+/* ===== HISTÓRICO ===== */
 async function carregarHistorico(){
  historico.innerHTML="";
- const d=new Date(Date.now()-7*86400000).toISOString();
+ const seteDias=new Date(Date.now()-7*86400000).toISOString();
  const {data}=await sb.from("requisicoes")
- .select("*").eq("usuario",usuarioLogado).gte("created_at",d)
+ .select("*")
+ .eq("usuario",usuarioLogado)
+ .gte("created_at",seteDias)
  .order("created_at",{ascending:false});
- data.forEach(r=>{
-  const h=(Date.now()-new Date(r.created_at))/3600000;
+ (data||[]).forEach(r=>{
+  const horas=(Date.now()-new Date(r.created_at))/3600000;
   historico.insertAdjacentHTML("beforeend",`
-  <tr id="r-${r.id}">
-   <td>${r.produto}</td>
-   <td>${r.quantidade}</td>
-   <td>${r.unidade}</td>
-   <td>${r.status}</td>
-   <td>${h<=1?`<button onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
-  </tr>`);
+   <tr id="row-${r.id}">
+    <td>${r.produto}</td>
+    <td>${r.quantidade}</td>
+    <td>${r.status}</td>
+    <td>${horas<=1?`<button class="btn-delete" onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
+   </tr>`);
  });
 }
 
+/* ===== EXCLUIR ===== */
 async function excluir(id){
  const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
- if(data)document.getElementById("r-"+id)?.remove();
+ if(data) document.getElementById("row-"+id)?.remove();
 }
 </script>
 </body>
