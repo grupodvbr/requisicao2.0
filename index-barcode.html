@@ -20,17 +20,13 @@ viewport-fit=cover">
 
 <style>
 *{box-sizing:border-box}
-html,body{
-  margin:0;
-  padding:0;
-  touch-action:manipulation;
-}
+html,body{margin:0;padding:0;touch-action:manipulation}
 body{
-  font-family:Inter,Arial,sans-serif;
+  font-family:Inter,Arial;
   background:linear-gradient(180deg,#eef2ff,#f8fafc);
   display:flex;
   justify-content:center;
-  padding:14px;
+  padding:12px;
 }
 
 /* ===== CONTAINER ===== */
@@ -52,13 +48,8 @@ h2{
   color:#0f172a;
 }
 
-/* ===== FORMS ===== */
-label{
-  font-weight:700;
-  margin-top:14px;
-  display:block;
-  color:#0f172a;
-}
+/* ===== FORM ===== */
+label{font-weight:700;margin-top:14px;display:block}
 input,select,textarea{
   width:100%;
   padding:14px;
@@ -66,14 +57,12 @@ input,select,textarea{
   border:1px solid #cbd5e1;
   border-radius:16px;
   font-size:15px;
-  background:#fff;
-}
-input:focus,select:focus,textarea:focus{
-  outline:none;
-  border-color:#2563eb;
 }
 input[readonly]{background:#f1f5f9}
 textarea{min-height:80px;resize:none}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:#2563eb;
+}
 
 /* ===== BUTTONS ===== */
 button{
@@ -86,27 +75,24 @@ button{
   font-size:15px;
   cursor:pointer;
   position:relative;
-  overflow:hidden;
 }
 .btn-primary{background:#2563eb;color:#fff}
 .btn-dark{background:#0f172a;color:#fff}
 .btn-muted{background:#e5e7eb;color:#0f172a}
 .btn-danger{background:#fee2e2;color:#991b1b}
 
-/* ===== OVERLAY NO BOTÃO ===== */
-button.loading{
-  pointer-events:none;
-  opacity:.9;
-}
+/* overlay botão */
+button.loading{pointer-events:none}
 button.loading::after{
   content:"Processando…";
-  position:absolute;
-  inset:0;
-  background:rgba(0,0,0,.25);
+  position:absolute;inset:0;
+  background:rgba(0,0,0,.35);
+  color:#fff;
   display:flex;
   align-items:center;
   justify-content:center;
   font-weight:800;
+  border-radius:18px;
 }
 
 /* ===== CAMERA ===== */
@@ -119,11 +105,7 @@ button.loading::after{
   margin-top:12px;
   overflow:hidden;
 }
-#camera video{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
+#camera video{width:100%;height:100%;object-fit:cover}
 
 /* ===== BADGE ===== */
 .badge{
@@ -138,42 +120,31 @@ button.loading::after{
 }
 
 /* ===== PROFILE ===== */
-.profile{
-  display:flex;
-  justify-content:center;
-  margin-bottom:14px;
-}
+.profile{display:flex;justify-content:center;margin-bottom:14px}
 .profile-name{
   background:#f1f5f9;
   padding:10px 18px;
   border-radius:999px;
   font-weight:800;
   cursor:pointer;
-  color:#0f172a;
 }
 .profile-menu{
   display:none;
   position:absolute;
-  top:72px;
-  right:22px;
+  top:70px;right:22px;
   background:#fff;
   border-radius:16px;
   box-shadow:0 20px 40px rgba(0,0,0,.2);
   overflow:hidden;
 }
 .profile-menu button{
-  background:none;
-  border:none;
+  background:none;border:none;
   padding:14px 20px;
   font-weight:800;
-  cursor:pointer;
-  text-align:left;
-}
-.profile-menu button:hover{
-  background:#f1f5f9;
+  width:100%;
 }
 
-/* ===== TABLE ===== */
+/* ===== HISTÓRICO ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -185,10 +156,7 @@ th,td{
   padding:8px;
   text-align:center;
 }
-th{
-  background:#f1f5f9;
-  font-weight:800;
-}
+th{background:#f1f5f9}
 .action-delete{
   background:#fee2e2;
   color:#991b1b;
@@ -196,14 +164,8 @@ th{
   border-radius:12px;
   padding:6px 12px;
   font-weight:800;
-  cursor:pointer;
-}
-.action-delete.loading{
-  pointer-events:none;
-  opacity:.6;
 }
 
-/* ===== UTIL ===== */
 .hidden{display:none}
 </style>
 </head>
@@ -213,7 +175,6 @@ th{
 
 <h2>📋 Requisição de Compras</h2>
 
-<!-- PERFIL -->
 <div id="profileArea"></div>
 
 <!-- LOGIN -->
@@ -237,7 +198,7 @@ th{
 </select>
 
 <label>Código de Barras</label>
-<input id="barcode" placeholder="Digite ou escaneie">
+<input id="barcode">
 
 <button class="btn-muted" id="btnManual">Buscar manual</button>
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
@@ -262,9 +223,7 @@ th{
 
 <table>
 <thead>
-<tr>
-<th>Produto</th><th>Un.</th><th>Qtd</th><th>Setor</th><th>Status</th><th>Ação</th>
-</tr>
+<tr><th>Produto</th><th>Qtd</th><th>Status</th><th>Ação</th></tr>
 </thead>
 <tbody id="historico"></tbody>
 </table>
@@ -280,33 +239,29 @@ th{
 </div>
 
 <script>
-/* ===== SUPABASE ===== */
 const sb = supabase.createClient(
   "https://mybsriouiwqsdufujbsc.supabase.co",
   "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
 let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
-let page=0, limit=10;
-let unidadeAuto="", barcodeFinal="";
+let page=0,limit=10;
+let unidadeAuto="",barcodeFinal="";
 let enviando=false;
 
-/* ===== LOGIN ===== */
-btnLogin.onclick = async ()=>{
-  const {data} = await sb.from("usuarios")
+/* LOGIN */
+btnLogin.onclick=async()=>{
+  const {data}=await sb.from("usuarios")
     .select("*")
     .eq("usuario",usuario.value)
     .eq("senha",senha.value)
     .eq("ativo",true)
     .single();
-
-  if(!data) return alert("Usuário ou senha inválidos");
-
+  if(!data) return alert("Usuário inválido");
   localStorage.setItem("usuario",JSON.stringify(data.usuario));
   location.reload();
 };
 
-/* ===== INIT ===== */
 if(usuarioLogado){
   loginArea.classList.add("hidden");
   appArea.classList.remove("hidden");
@@ -319,45 +274,40 @@ if(usuarioLogado){
     </div>`;
   carregarHistorico();
 }
+
 function toggleMenu(){
-  const m=document.getElementById("menuPerfil");
-  m.style.display=m.style.display==="block"?"none":"block";
+  menuPerfil.style.display=menuPerfil.style.display==="block"?"none":"block";
 }
 function logout(){
   localStorage.removeItem("usuario");
   location.reload();
 }
 
-/* ===== BARCODE ===== */
-function normalizar(c){
-  return "0"+String(c).replace(/\D/g,"");
-}
+/* BARCODE */
+const normalizar=c=>"0"+String(c).replace(/\D/g,"");
 
-/* ===== BUSCAR PRODUTO ===== */
+/* BUSCAR PRODUTO */
 async function buscarProduto(code){
   barcodeFinal=code;
   const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
   const j=await r.json();
   if(!j.produto) return alert("Produto não encontrado");
-
   produto.value=j.produto.descricao;
   unidadeAuto=j.produto.unidadeDeVenda;
-  unidadeBox.innerHTML=`<div class="badge">📏 Unidade: ${unidadeAuto}</div>`;
-  document.getElementById("beep").play();
+  unidadeBox.innerHTML=`<div class="badge">📏 ${unidadeAuto}</div>`;
+  beep.play();
   fecharCamera();
 }
 
-/* ===== CAMERA ===== */
+/* CAMERA */
 btnOpenCamera.onclick=()=>{
   camera.style.display="block";
   btnOpenCamera.classList.add("hidden");
   btnCloseCamera.classList.remove("hidden");
-
   Quagga.init({
     inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
     decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
   },()=>Quagga.start());
-
   Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
 };
 function fecharCamera(){
@@ -367,18 +317,13 @@ function fecharCamera(){
   btnCloseCamera.classList.add("hidden");
 }
 btnCloseCamera.onclick=fecharCamera;
-
-/* ===== MANUAL ===== */
 btnManual.onclick=()=>barcode.value&&buscarProduto(normalizar(barcode.value));
 
-/* ===== ENVIAR ===== */
+/* ENVIAR */
 btnEnviar.onclick=async()=>{
   if(enviando) return;
   if(!setor.value||!produto.value||!quantidade.value) return alert("Preencha tudo");
-
-  enviando=true;
-  btnEnviar.classList.add("loading");
-
+  enviando=true;btnEnviar.classList.add("loading");
   await sb.from("requisicoes").insert({
     usuario:usuarioLogado,
     setor:setor.value,
@@ -389,17 +334,13 @@ btnEnviar.onclick=async()=>{
     barcode:barcodeFinal,
     status:"PENDENTE"
   });
-
   btnEnviar.classList.remove("loading");
   enviando=false;
-
   limparCampos();
-  historico.innerHTML="";
-  page=0;
-  carregarHistorico();
+  historico.innerHTML="";page=0;carregarHistorico();
 };
 
-/* ===== HISTÓRICO ===== */
+/* HISTÓRICO */
 async function carregarHistorico(){
   const seteDias=new Date(Date.now()-7*86400000).toISOString();
   const {data}=await sb.from("requisicoes")
@@ -414,48 +355,33 @@ async function carregarHistorico(){
     historico.insertAdjacentHTML("beforeend",`
       <tr id="row-${r.id}">
         <td>${r.produto}</td>
-        <td>${r.unidade}</td>
         <td>${r.quantidade}</td>
-        <td>${r.setor}</td>
         <td>${r.status}</td>
-        <td>
-          ${horas<=1
-            ? `<button class="action-delete" onclick="excluir('${r.id}',this)">Excluir</button>`
-            : "-"}
-        </td>
-      </tr>
-    `);
+        <td>${horas<=1?`<button class="action-delete" onclick="excluir('${r.id}',this)">Excluir</button>`:"-"}</td>
+      </tr>`);
   });
-
   btnMais.classList.toggle("hidden",data.length!==limit);
   page++;
 }
 btnMais.onclick=carregarHistorico;
 
-/* ===== EXCLUIR ===== */
+/* EXCLUIR */
 async function excluir(id,btn){
   if(!confirm("Excluir requisição?")) return;
   btn.classList.add("loading");
-
   const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
-  if(!data){
-    alert("Você só pode excluir até 1 hora após o envio");
-    btn.classList.remove("loading");
-    return;
-  }
+  if(!data){alert("Limite de 1 hora");btn.classList.remove("loading");return;}
   document.getElementById("row-"+id).remove();
 }
 
-/* ===== UTIL ===== */
+/* UTIL */
 function limparCampos(){
-  barcode.value="";
-  produto.value="";
-  quantidade.value="";
-  observacoes.value="";
+  barcode.value="";produto.value="";
+  quantidade.value="";observacoes.value="";
   unidadeBox.innerHTML="";
 }
 
-/* ===== PWA ===== */
+/* PWA */
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("/service-worker.js");
 }
