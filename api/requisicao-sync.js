@@ -8,6 +8,10 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (!req.body) {
+      return res.status(400).json({ error: "Body vazio" });
+    }
+
     const { requisicao, novoStatus, vf_token } = req.body;
 
     if (!requisicao || !novoStatus || !vf_token) {
@@ -15,6 +19,7 @@ export default async function handler(req, res) {
         error: "requisicao, novoStatus e vf_token são obrigatórios"
       });
     }
+
 
     if (novoStatus === "ENTREGUE" && !requisicao.produto_id_vf) {
       return res.status(400).json({
