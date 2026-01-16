@@ -37,18 +37,20 @@ export default async function handler(req, res) {
         motivoRequisicaoId: 1,
         observacaoGeral: "REGISTRO VIA API - CB SYSTEMS",
         total: 0,
-        itens: [
-          {
-            id: 0,
-            produtoId: requisicao.produto_id_vf,
-            quantidadeTransferida: requisicao.quantidade,
-            observacao: "REGISTRO VIA API - CB SYSTEMS",
-            custoMedio: 0,
-            custo: 0,
-            custoReposicao: 0,
-            custoFiscal: 0
-          }
-        ]
+itens: [
+  {
+    id: 0,
+    produtoId: requisicao.produto_id_vf,
+    quantidadeTransferida: requisicao.quantidade,
+    observacao: "REGISTRO VIA API - CB SYSTEMS",
+
+    custoMedio: requisicao.custo ?? 0.01,
+    custo: requisicao.custo ?? 0.01,
+    custoReposicao: requisicao.custo ?? 0.01,
+    custoFiscal: requisicao.custo ?? 0.01
+  }
+]
+
       };
 
       const vfResp = await fetch(
