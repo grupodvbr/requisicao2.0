@@ -293,12 +293,34 @@ function render(lista){
  });
 }
 
-/* STATUS */
-async function mudarStatus(id,status){
- await sb.from("requisicoes").update({status}).eq("id",id);
- const r=dados.find(d=>d.id===id); if(r) r.status=status;
- calcularResumo();
+async function mudarStatus(id, novoStatus) {
+  // 1. Busca registro atual
+  const { data: req } = await sb
+    .from("requisicoes")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  // 2. Se ENTREGUE → cria no Varejo
+  if (novoStatus === "ENTREGUE" && !req.vf_requisicao_id) {
+    await fetch("/api/requisicao", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(montarPayloadVF(req))
+    });
+  }
+
+  // 3. Se estava ENTREGUE e saiu → estorna
+  if (req.status === "ENTREGUE" && novoStatus !== "ENTREGUE") {
+    await fetch(`/api/requisicao/${req.vf_requisicao_id}`, {
+      method: "DELETE"
+    });
+  }
+
+  // 4. Atualiza status local
+  await sb.from("requisicoes").update({ status: novoStatus }).eq("id", id);
 }
+
 
 /* RESUMO */
 function calcularResumo(){
