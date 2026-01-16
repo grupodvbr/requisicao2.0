@@ -301,7 +301,15 @@ async function mudarStatus(id, novoStatus) {
     .select("*")
     .eq("id", id)
     .single();
+// 🚫 BLOQUEIA ENTREGA SEM ID DO VAREJO FÁCIL
+if (novoStatus === "ENTREGUE" && !req.produto_id_vf) {
+  alert("Este produto não possui ID do Varejo Fácil. Atualize o produto antes de entregar.");
+  return;
+}
 
+
+
+  
   // 2. Chama API de sincronização
   const r = await fetch("/api/requisicao-sync", {
     method: "POST",
@@ -330,8 +338,14 @@ async function mudarStatus(id, novoStatus) {
 
   await sb.from("requisicoes").update(update).eq("id", id);
 
-  const rLocal = dados.find(d => d.id === id);
-  if (rLocal) rLocal.status = novoStatus;
+const rLocal = dados.find(d => d.id === id);
+if (rLocal) {
+  rLocal.status = novoStatus;
+  if (update.vf_requisicao_id) {
+    rLocal.vf_requisicao_id = update.vf_requisicao_id;
+  }
+}
+
 
   calcularResumo();
 }
@@ -387,11 +401,13 @@ async function buscarProduto(code){
  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
  const j=await r.json();
  if(j?.produto){
-  await sb.from("requisicoes").update({
-   produto:j.produto.descricao,
-   unidade:j.produto.unidadeDeVenda,
-   barcode:code
-  }).eq("id",registroAtual.id);
+   
+await sb.from("requisicoes").update({
+  produto: j.produto.descricao,
+  unidade: j.produto.unidadeDeVenda,
+  barcode: code,
+  produto_id_vf: j.produto.id
+}).eq("id", registroAtual.id);
   registroAtual.produto=j.produto.descricao;
   registroAtual.unidade=j.produto.unidadeDeVenda;
   fecharPopupProduto();
