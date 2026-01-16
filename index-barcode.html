@@ -555,9 +555,9 @@ btnEnviar.onclick=async()=>{
  });
  btnEnviar.classList.remove("loading");
  enviando=false;
- produto.value="";quantidade.value="";observacoes.value="";unidadeBox.innerHTML="";
- carregarHistorico();
-};
+limparBuscaParaNovoRegistro();
+carregarHistorico();
+
 
 /* ===== HISTÓRICO ===== */
 async function carregarHistorico(){
@@ -649,6 +649,26 @@ async function gerarTokenVF() {
   } catch (err) {
     console.error("Erro auth VF:", err);
   }
+}
+function limparBuscaParaNovoRegistro() {
+  barcode.value = "";
+  buscaProdutoNome.value = "";
+  buscaProdutoId.value = "";
+
+  produto.value = "";
+  quantidade.value = "";
+  observacoes.value = "";
+
+  unidadeAuto = "";
+  unidadeBox.innerHTML = "";
+  listaProdutos.innerHTML = "";
+  codigoLido.textContent = "";
+
+  // Fecha câmera se estiver aberta
+  try { Quagga.stop(); } catch(e){}
+  camera.style.display = "none";
+  btnOpenCamera.classList.remove("hidden");
+  btnCloseCamera.classList.add("hidden");
 }
 
 </script>
