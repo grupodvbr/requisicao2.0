@@ -294,31 +294,46 @@ function render(lista){
 }
 
 async function mudarStatus(id, novoStatus) {
-  // 1. Busca registro atual
+
+  // 1. Busca registro completo
   const { data: req } = await sb
     .from("requisicoes")
     .select("*")
     .eq("id", id)
     .single();
 
-  // 2. Se ENTREGUE → cria no Varejo
-  if (novoStatus === "ENTREGUE" && !req.vf_requisicao_id) {
-    await fetch("/api/requisicao", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(montarPayloadVF(req))
-    });
+  // 2. Chama API de sincronização
+  const r = await fetch("/api/requisicao-sync", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requisicao: req,
+      novoStatus
+    })
+  });
+
+  const j = await r.json();
+
+  // 3. Atualiza Supabase conforme resposta
+  const update = { status: novoStatus };
+
+  if (j.vf_requisicao_id) {
+    update.vf_requisicao_id = j.vf_requisicao_id;
+    update.vf_status = "RECEBIDA";
+    update.vf_enviado_em = new Date().toISOString();
   }
 
-  // 3. Se estava ENTREGUE e saiu → estorna
-  if (req.status === "ENTREGUE" && novoStatus !== "ENTREGUE") {
-    await fetch(`/api/requisicao/${req.vf_requisicao_id}`, {
-      method: "DELETE"
-    });
+  if (j.acao === "ESTORNADA") {
+    update.vf_requisicao_id = null;
+    update.vf_status = "ESTORNADA";
   }
 
-  // 4. Atualiza status local
-  await sb.from("requisicoes").update({ status: novoStatus }).eq("id", id);
+  await sb.from("requisicoes").update(update).eq("id", id);
+
+  const rLocal = dados.find(d => d.id === id);
+  if (rLocal) rLocal.status = novoStatus;
+
+  calcularResumo();
 }
 
 
