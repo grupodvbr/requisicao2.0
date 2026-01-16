@@ -544,16 +544,17 @@ btnEnviar.onclick = async () => {
   enviando = true;
   btnEnviar.classList.add("loading");
 
-  await sb.from("requisicoes").insert({
-    usuario: usuarioLogado,
-    setor: setorEl.value,
-    produto: produto.value,
-    unidade: unidadeAuto,
-    quantidade: quantidade.value,
-    observacoes: observacoes.value,
-    barcode: barcodeFinal,
-    status: "PENDENTE"
-  });
+await sb.from("requisicoes").insert({
+  usuario: usuarioLogado,
+  setor: setorEl.value,
+  produto: produto.value,
+  produto_id_vf: produtoIdVF, // ✅ SALVANDO ID DO VAREJO
+  unidade: unidadeAuto,
+  quantidade: quantidade.value,
+  observacoes: observacoes.value,
+  barcode: barcodeFinal,
+  status: "PENDENTE"
+});
 
   btnEnviar.classList.remove("loading");
   enviando = false;
@@ -681,6 +682,7 @@ function limparBuscaParaNovoRegistro() {
   observacoes.value = "";
 
   unidadeAuto = "";
+  produtoIdVF = null; // ✅ LIMPA ID
   unidadeBox.innerHTML = "";
   listaProdutos.innerHTML = "";
   codigoLido.textContent = "";
