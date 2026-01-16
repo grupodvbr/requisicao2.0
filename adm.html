@@ -316,7 +316,7 @@ const r = await fetch("/api/requisicao-sync", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`
+    "Authorization": token
   },
   body: JSON.stringify({
     requisicao: req,
