@@ -496,13 +496,14 @@ async function buscarProduto(code){
  try{
   const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
   const j=await r.json();
-  if(j?.produto){
-   produto.value=j.produto.descricao;
-   unidadeAuto=j.produto.unidadeDeVenda;
-   unidadeBox.innerHTML=`<div class="badge">${unidadeAuto}</div>`;
-   beep.play();
-   fecharCamera();
-  }
+if (j?.produto) {
+  produto.value = j.produto.descricao;
+  unidadeAuto = j.produto.unidadeDeVenda;
+  produtoIdVF = j.produto.id; // ✅ ID DO VAREJO FÁCIL
+  unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
+  beep.play();
+  fecharCamera();
+}
  }catch{}
 }
 
@@ -624,9 +625,11 @@ buscaProdutoNome.onkeyup = async () => {
 function selecionarProduto(p){
   produto.value = p.descricao;
   unidadeAuto = p.unidadeDeVenda;
+  produtoIdVF = p.id; // ✅ ID VF
   unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
   listaProdutos.innerHTML = "";
 }
+
 buscaProdutoId.onchange = async () => {
   const id = buscaProdutoId.value;
   if (!id) return;
@@ -643,10 +646,11 @@ buscaProdutoId.onchange = async () => {
   const j = await r.json();
 
   if (j?.items?.length) {
-    const p = j.items[0];
-    produto.value = p.descricao;
-    unidadeAuto = p.unidadeDeVenda;
-    unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
+const p = j.items[0];
+produto.value = p.descricao;
+unidadeAuto = p.unidadeDeVenda;
+produtoIdVF = p.id; // ✅ ID VF
+unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
   }
 };
 
