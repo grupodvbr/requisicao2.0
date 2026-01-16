@@ -5,33 +5,20 @@ export default async function handler(req, res) {
 
   try {
     const { requisicao, novoStatus } = req.body;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ error: "Token VF ausente" });
+    }
 
     if (!requisicao || !novoStatus) {
       return res.status(400).json({ error: "Dados incompletos" });
     }
 
-    // 🔒 Validação crítica
     if (novoStatus === "ENTREGUE" && !requisicao.produto_id_vf) {
-      return res.status(400).json({
-        error: "produto_id_vf não informado"
-      });
+      return res.status(400).json({ error: "produto_id_vf não informado" });
     }
 
-    // 🌐 BASE URL CORRETA (do seu sistema)
-    const baseUrl =
-      `${req.headers["x-forwarded-proto"] || "https"}://${req.headers.host}`;
-
-    // 🔐 AUTH VF
-    const authResp = await fetch(`${baseUrl}/api/auth`);
-    const auth = await authResp.json();
-
-    if (!auth.accessToken) {
-      return res.status(401).json({
-        error: "Erro ao autenticar no Varejo Fácil"
-      });
-    }
-
-    // 🟢 ENTREGUE → CRIA
     if (novoStatus === "ENTREGUE" && !requisicao.vf_requisicao_id) {
 
       const payloadVF = {
@@ -49,18 +36,16 @@ export default async function handler(req, res) {
         motivoRequisicaoId: 1,
         observacaoGeral: "REGISTRO VIA API - CB SYSTEMS",
         total: 0,
-        itens: [
-          {
-            id: 0,
-            produtoId: requisicao.produto_id_vf,
-            quantidadeTransferida: requisicao.quantidade,
-            observacao: "REGISTRO VIA API - CB SYSTEMS",
-            custoMedio: 0,
-            custo: 0,
-            custoReposicao: 0,
-            custoFiscal: 0
-          }
-        ]
+        itens: [{
+          id: 0,
+          produtoId: requisicao.produto_id_vf,
+          quantidadeTransferida: requisicao.quantidade,
+          observacao: "REGISTRO VIA API - CB SYSTEMS",
+          custoMedio: 0,
+          custo: 0,
+          custoReposicao: 0,
+          custoFiscal: 0
+        }]
       };
 
       const vfResp = await fetch(
@@ -68,7 +53,7 @@ export default async function handler(req, res) {
         {
           method: "POST",
           headers: {
-            Authorization: auth.accessToken,
+            Authorization: authHeader,
             "Content-Type": "application/json",
             Accept: "application/json"
           },
@@ -76,41 +61,21 @@ export default async function handler(req, res) {
         }
       );
 
-      const vfText = await vfResp.text();
+      const text = await vfResp.text();
 
       if (!vfResp.ok) {
         return res.status(vfResp.status).json({
           error: "Erro Varejo Fácil",
-          raw: vfText
+          raw: text
         });
       }
 
-      const vfJson = JSON.parse(vfText);
+      const json = JSON.parse(text);
 
       return res.status(200).json({
         acao: "CRIADA",
-        vf_requisicao_id: vfJson.id
+        vf_requisicao_id: json.id
       });
-    }
-
-    // 🔴 ESTORNO
-    if (
-      requisicao.status === "ENTREGUE" &&
-      novoStatus !== "ENTREGUE" &&
-      requisicao.vf_requisicao_id
-    ) {
-      await fetch(
-        `https://villachopp.varejofacil.com/api/v1/estoque/requisicoes-mercadorias/${requisicao.vf_requisicao_id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: auth.accessToken,
-            Accept: "application/json"
-          }
-        }
-      );
-
-      return res.status(200).json({ acao: "ESTORNADA" });
     }
 
     return res.status(200).json({ acao: "NENHUMA" });
