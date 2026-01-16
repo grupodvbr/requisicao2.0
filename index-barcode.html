@@ -593,21 +593,32 @@ async function excluir(id){
 }
 buscaProdutoNome.onkeyup = async () => {
   const q = buscaProdutoNome.value.trim();
-  if (q.length < 2) return;
 
-  const r = await fetch(`/api/produtos-busca?q=${encodeURIComponent(q)}`);
-  const j = await r.json();
+  // 🔥 SE APAGOU OU MENOS DE 2 CARACTERES → LIMPA LISTA
+  if (q.length < 2) {
+    listaProdutos.innerHTML = "";
+    return;
+  }
 
-  listaProdutos.innerHTML = "";
+  try {
+    const r = await fetch(`/api/produtos-busca?q=${encodeURIComponent(q)}`);
+    const j = await r.json();
 
-  (j.items || []).forEach(p => {
-    listaProdutos.insertAdjacentHTML(
-      "beforeend",
-      `<div class="item" onclick='selecionarProduto(${JSON.stringify(p)})'>
-        ${p.descricao}
-      </div>`
-    );
-  });
+    listaProdutos.innerHTML = "";
+
+    (j.items || []).forEach(p => {
+      listaProdutos.insertAdjacentHTML(
+        "beforeend",
+        `<div class="item" onclick='selecionarProduto(${JSON.stringify(p)})'>
+          ${p.descricao}
+        </div>`
+      );
+    });
+
+  } catch (err) {
+    console.error("Erro busca nome:", err);
+    listaProdutos.innerHTML = "";
+  }
 };
 
 function selecionarProduto(p){
