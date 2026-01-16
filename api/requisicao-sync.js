@@ -4,52 +4,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { requisicao, novoStatus } = req.body;
+    const { requisicao, novoStatus, vf_token } = req.body;
 
-    if (!requisicao || !novoStatus) {
-      return res.status(400).json({ error: "Dados incompletos" });
-    }
-
-    // 🔐 TOKEN VINDO DO FRONT (aceita ambos)
-    const authHeader =
-      req.headers.authorization || req.headers.Authorization;
-
-    if (!authHeader) {
-      return res.status(401).json({
-        error: "Authorization header não recebido"
+    if (!requisicao || !novoStatus || !vf_token) {
+      return res.status(400).json({
+        error: "requisicao, novoStatus e vf_token são obrigatórios"
       });
     }
 
-    // 🔒 Validação crítica
+    // 🔒 regra de negócio
     if (novoStatus === "ENTREGUE" && !requisicao.produto_id_vf) {
       return res.status(400).json({
         error: "produto_id_vf não informado"
       });
     }
 
-    // 🟢 CRIA REQUISIÇÃO NO VAREJO FÁCIL
+    // 🟢 CRIAR NO VAREJO FÁCIL
     if (novoStatus === "ENTREGUE" && !requisicao.vf_requisicao_id) {
 
       const payloadVF = {
         id: 0,
         dataTransferencia: new Date().toISOString(),
         dataRecebimento: new Date().toISOString(),
-
         tipo: "TRANSFERENCIA",
         status: "RECEBIDA",
         modelo: "DIRETA",
-
         lojaId: 2,
         localOrigemId: 20,
         localDestinoId: 31,
-
         setorId: 2,
         solicitanteId: 72,
         motivoRequisicaoId: 1,
-
         observacaoGeral: "REGISTRO VIA API - CB SYSTEMS",
         total: 0,
-
         itens: [
           {
             id: 0,
@@ -69,9 +56,9 @@ export default async function handler(req, res) {
         {
           method: "POST",
           headers: {
-            Authorization: authHeader, // 🔥 TOKEN DO FRONT
+            "Authorization": vf_token,
             "Content-Type": "application/json",
-            Accept: "application/json"
+            "Accept": "application/json"
           },
           body: JSON.stringify(payloadVF)
         }
@@ -94,7 +81,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 🔴 ESTORNO (voltar de ENTREGUE)
+    // 🔴 ESTORNO
     if (
       requisicao.status === "ENTREGUE" &&
       novoStatus !== "ENTREGUE" &&
@@ -105,8 +92,8 @@ export default async function handler(req, res) {
         {
           method: "DELETE",
           headers: {
-            Authorization: authHeader,
-            Accept: "application/json"
+            "Authorization": vf_token,
+            "Accept": "application/json"
           }
         }
       );
