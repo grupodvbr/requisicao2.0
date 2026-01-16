@@ -1,3 +1,7 @@
+export const config = {
+  runtime: "edge"
+};
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
@@ -12,7 +16,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // 🔒 regra de negócio
     if (novoStatus === "ENTREGUE" && !requisicao.produto_id_vf) {
       return res.status(400).json({
         error: "produto_id_vf não informado"
@@ -22,6 +25,8 @@ export default async function handler(req, res) {
     // 🟢 CRIAR NO VAREJO FÁCIL
     if (novoStatus === "ENTREGUE" && !requisicao.vf_requisicao_id) {
 
+      const custo = Number(requisicao.custo) || 0.01;
+
       const payloadVF = {
         id: 0,
         dataTransferencia: new Date().toISOString(),
@@ -29,28 +34,26 @@ export default async function handler(req, res) {
         tipo: "TRANSFERENCIA",
         status: "RECEBIDA",
         modelo: "DIRETA",
-        lojaId: 2,
-        localOrigemId: 20,
-        localDestinoId: 31,
-        setorId: 2,
-        solicitanteId: 72,
-        motivoRequisicaoId: 1,
-        observacaoGeral: "REGISTRO VIA API - CB SYSTEMS",
+        lojaId: requisicao.loja_id,
+        localOrigemId: requisicao.local_origem_id,
+        localDestinoId: requisicao.local_destino_id,
+        setorId: requisicao.setor_id,
+        solicitanteId: requisicao.solicitante_id,
+        motivoRequisicaoId: requisicao.motivo_requisicao_id,
+        observacaoGeral: requisicao.observacao_geral || "REGISTRO VIA API",
         total: 0,
-itens: [
-  {
-    id: 0,
-    produtoId: requisicao.produto_id_vf,
-    quantidadeTransferida: requisicao.quantidade,
-    observacao: "REGISTRO VIA API - CB SYSTEMS",
-
-    custoMedio: requisicao.custo ?? 0.01,
-    custo: requisicao.custo ?? 0.01,
-    custoReposicao: requisicao.custo ?? 0.01,
-    custoFiscal: requisicao.custo ?? 0.01
-  }
-]
-
+        itens: [
+          {
+            id: 0,
+            produtoId: requisicao.produto_id_vf,
+            quantidadeTransferida: requisicao.quantidade,
+            observacao: requisicao.observacoes || "",
+            custoMedio: custo,
+            custo: custo,
+            custoReposicao: custo,
+            custoFiscal: custo
+          }
+        ]
       };
 
       const vfResp = await fetch(
@@ -58,7 +61,7 @@ itens: [
         {
           method: "POST",
           headers: {
-            "Authorization": vf_token,
+            "Authorization": `Bearer ${vf_token}`,
             "Content-Type": "application/json",
             "Accept": "application/json"
           },
@@ -94,7 +97,7 @@ itens: [
         {
           method: "DELETE",
           headers: {
-            "Authorization": vf_token,
+            "Authorization": `${vf_token}`,
             "Accept": "application/json"
           }
         }
