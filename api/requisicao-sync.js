@@ -5,11 +5,21 @@ export default async function handler(req, res) {
 
   try {
     const { requisicao, novoStatus } = req.body;
-    const authHeader = req.headers.authorization;
+// 🔐 AUTH VF (sempre pelo backend)
+const authResp = await fetch(
+  `${process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "http://localhost:3000"}/api/auth`
+);
 
-    if (!authHeader) {
-      return res.status(401).json({ error: "Token VF ausente" });
-    }
+const auth = await authResp.json();
+
+if (!auth.accessToken) {
+  return res.status(401).json({
+    error: "Falha ao obter token do Varejo Fácil"
+  });
+}
+
+const authHeader = `Bearer ${auth.accessToken}`;
+
 
     if (!requisicao || !novoStatus) {
       return res.status(400).json({ error: "Dados incompletos" });
