@@ -537,25 +537,32 @@ btnManual.onclick = () => {
   }
 };
 
-/* ===== ENVIAR ===== */
-btnEnviar.onclick=async()=>{
- if(enviando||!produto.value||!quantidade.value)return;
- enviando=true;
- btnEnviar.classList.add("loading");
- await sb.from("requisicoes").insert({
-  usuario:usuarioLogado,
-  setor:setorEl.value,
-  produto:produto.value,
-  unidade:unidadeAuto,
-  quantidade:quantidade.value,
-  observacoes:observacoes.value,
-  barcode:barcodeFinal,
-  status:"PENDENTE"
- });
- btnEnviar.classList.remove("loading");
- enviando=false;
-limparBuscaParaNovoRegistro();
-carregarHistorico();
+btnEnviar.onclick = async () => {
+  if (enviando || !produto.value || !quantidade.value) return;
+
+  enviando = true;
+  btnEnviar.classList.add("loading");
+
+  await sb.from("requisicoes").insert({
+    usuario: usuarioLogado,
+    setor: setorEl.value,
+    produto: produto.value,
+    unidade: unidadeAuto,
+    quantidade: quantidade.value,
+    observacoes: observacoes.value,
+    barcode: barcodeFinal,
+    status: "PENDENTE"
+  });
+
+  btnEnviar.classList.remove("loading");
+  enviando = false;
+
+  // 🔥 LIMPA PARA NOVO REGISTRO (SEM MEXER NO SETOR)
+  limparBuscaParaNovoRegistro();
+
+  carregarHistorico();
+};
+
 
 
 /* ===== HISTÓRICO ===== */
