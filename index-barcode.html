@@ -417,6 +417,9 @@ const barcodeInput = document.getElementById("barcode");
 const btnManual = document.getElementById("btnManual");
 const btnOpenCamera = document.getElementById("btnOpenCamera");
 const btnCloseCamera = document.getElementById("btnCloseCamera");
+// ✅ ELEMENTOS DA CÂMERA (ESTAVA FALTANDO)
+const camera = document.getElementById("camera");
+const codigoLido = document.getElementById("codigoLido");
 
 function aplicarModoBusca() {
   const modo = modoBuscaEl.value;
@@ -520,25 +523,66 @@ if (j?.produto) {
  }catch{}
 }
 
-/* ===== CAMERA ===== */
-btnOpenCamera.onclick=()=>{
- camera.style.display="block";
- btnOpenCamera.classList.add("hidden");
- btnCloseCamera.classList.remove("hidden");
- codigoLido.textContent="";
- Quagga.init({
-  inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
-  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
- },()=>Quagga.start());
- Quagga.onDetected(r=>buscarProduto(normalizar(r.codeResult.code)));
+/* ===== CAMERA (CORRIGIDA) ===== */
+btnOpenCamera.onclick = () => {
+  camera.style.display = "block";
+  btnOpenCamera.classList.add("hidden");
+  btnCloseCamera.classList.remove("hidden");
+  codigoLido.textContent = "Abrindo câmera...";
+
+  Quagga.init({
+    inputStream: {
+      type: "LiveStream",
+      target: camera,
+      constraints: {
+        facingMode: "environment",
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    },
+    locator: {
+      patchSize: "medium",
+      halfSample: true
+    },
+    numOfWorkers: navigator.hardwareConcurrency || 4,
+    decoder: {
+      readers: [
+        "ean_reader",
+        "ean_8_reader",
+        "upc_reader",
+        "code_128_reader"
+      ]
+    },
+    locate: true
+  }, function (err) {
+    if (err) {
+      console.error("Erro câmera:", err);
+      alert("Erro ao acessar a câmera");
+      codigoLido.textContent = "Erro ao abrir câmera";
+      return;
+    }
+
+    Quagga.start();
+    codigoLido.textContent = "Aponte para o código de barras";
+  });
+
+  Quagga.offDetected();
+  Quagga.onDetected(result => {
+    if (!result?.codeResult?.code) return;
+    buscarProduto(normalizar(result.codeResult.code));
+  });
 };
-btnCloseCamera.onclick=fecharCamera;
-function fecharCamera(){
- Quagga.stop();
- camera.style.display="none";
- btnOpenCamera.classList.remove("hidden");
- btnCloseCamera.classList.add("hidden");
+
+btnCloseCamera.onclick = fecharCamera;
+
+function fecharCamera() {
+  try { Quagga.stop(); } catch(e){}
+  camera.style.display = "none";
+  btnOpenCamera.classList.remove("hidden");
+  btnCloseCamera.classList.add("hidden");
+  codigoLido.textContent = "";
 }
+
 btnManual.onclick = () => {
   const modo = modoBuscaEl.value;
 
