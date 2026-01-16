@@ -310,15 +310,20 @@ if (novoStatus === "ENTREGUE" && !req.produto_id_vf) {
 
 
   
-  // 2. Chama API de sincronização
-  const r = await fetch("/api/requisicao-sync", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      requisicao: req,
-      novoStatus
-    })
-  });
+const token = localStorage.getItem("vf_token");
+
+const r = await fetch("/api/requisicao-sync", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    requisicao: req,
+    novoStatus
+  })
+});
+
 
   const j = await r.json();
 
