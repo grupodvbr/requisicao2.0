@@ -547,12 +547,31 @@ btnEnviar.onclick = async () => {
 await sb.from("requisicoes").insert({
   usuario: usuarioLogado,
   setor: setorEl.value,
+
+  // PRODUTO
   produto: produto.value,
-  produto_id_vf: produtoIdVF, // ✅ SALVANDO ID DO VAREJO
+  produto_id_vf: produtoIdVF,
   unidade: unidadeAuto,
-  quantidade: quantidade.value,
-  observacoes: observacoes.value,
+  quantidade: Number(quantidade.value),
   barcode: barcodeFinal,
+
+  // CUSTOS (🔥 O PROBLEMA ESTAVA AQUI)
+  custo: custoPadrao,
+  custo_medio: custoPadrao,
+  custo_reposicao: custoPadrao,
+  custo_fiscal: custoPadrao,
+
+  // CONTEXTO VF
+  loja_id: 2,
+  local_origem_id: 20,
+  local_destino_id: 31,
+  setor_id: 2,
+  solicitante_id: 72,
+  motivo_requisicao_id: 1,
+
+  observacao_geral: observacoes.value,
+  observacoes: observacoes.value,
+
   status: "PENDENTE"
 });
 
