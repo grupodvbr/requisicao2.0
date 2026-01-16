@@ -295,55 +295,54 @@ function render(lista){
 
 async function mudarStatus(id, novoStatus) {
 
-  // 1. Busca registro completo
-  const { data: req } = await sb
+  // 🔥 BUSCA A REQUISIÇÃO COMPLETA NO SUPABASE
+  const { data: requisicao, error } = await sb
     .from("requisicoes")
     .select("*")
     .eq("id", id)
     .single();
-// 🚫 BLOQUEIA ENTREGA SEM ID DO VAREJO FÁCIL
-if (novoStatus === "ENTREGUE" && !req.produto_id_vf) {
-  alert("Este produto não possui ID do Varejo Fácil. Atualize o produto antes de entregar.");
-  return;
+
+  if (error || !requisicao) {
+    alert("Erro ao carregar requisição");
+    return;
+  }
+
+  const resp = await fetch("/api/requisicao-sync", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      requisicao,
+      novoStatus,
+      vf_token: localStorage.getItem("vf_token")
+    })
+  });
+
+  const text = await resp.text();
+
+  if (!resp.ok) {
+    console.error("Erro API:", text);
+    alert("Erro ao sincronizar com o Varejo Fácil");
+    return;
+  }
+
+  const json = JSON.parse(text);
+
+  console.log("SYNC OK:", json);
+
+  // 🔥 ATUALIZA STATUS LOCAL
+  await sb
+    .from("requisicoes")
+    .update({
+      status: novoStatus,
+      vf_requisicao_id: json.vf_requisicao_id ?? requisicao.vf_requisicao_id,
+      vf_status: json.acao,
+      vf_enviado_em: new Date().toISOString()
+    })
+    .eq("id", id);
 }
 
-
-
-  
-const vf_token = localStorage.getItem("vf_token");
-
-const r = await fetch("/api/requisicao-sync", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    requisicao: req,
-    novoStatus,
-    vf_token
-  })
-});
-
-
-
-
-  const j = await r.json();
-
-  // 3. Atualiza Supabase conforme resposta
-  const update = { status: novoStatus };
-
-  if (j.vf_requisicao_id) {
-    update.vf_requisicao_id = j.vf_requisicao_id;
-    update.vf_status = "RECEBIDA";
-    update.vf_enviado_em = new Date().toISOString();
-  }
-
-  if (j.acao === "ESTORNADA") {
-    update.vf_requisicao_id = null;
-    update.vf_status = "ESTORNADA";
-  }
-
-  await sb.from("requisicoes").update(update).eq("id", id);
 
 const rLocal = dados.find(d => d.id === id);
 if (rLocal) {
