@@ -400,9 +400,15 @@ const sb=supabase.createClient(
 const normalizar=c=>"0"+String(c).replace(/\D/g,"");
 
 /* ===== ESTADO ===== */
-let usuarioLogado=JSON.parse(localStorage.getItem("usuario"));
-let unidadeAuto="",barcodeFinal="";
-let enviando=false;
+let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
+let unidadeAuto = "";
+let barcodeFinal = "";
+let enviando = false;
+
+// 🔥 ADICIONAR
+let custoPadrao = 0;
+let produtoIdVF = null;
+
 const modoBuscaEl = document.getElementById("modoBusca");
 const buscaNomeEl = document.getElementById("buscaNome");
 const buscaIdEl = document.getElementById("buscaId");
@@ -500,6 +506,13 @@ if (j?.produto) {
   produto.value = j.produto.descricao;
   unidadeAuto = j.produto.unidadeDeVenda;
   produtoIdVF = j.produto.id; // ✅ ID DO VAREJO FÁCIL
+   custoPadrao =
+    j.produto.custoMedio ??
+    j.produto.custo ??
+    j.produto.custoReposicao ??
+    0.01; // fallback obrigatório
+
+   
   unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
   beep.play();
   fecharCamera();
@@ -646,6 +659,12 @@ function selecionarProduto(p){
   produto.value = p.descricao;
   unidadeAuto = p.unidadeDeVenda;
   produtoIdVF = p.id; // ✅ ID VF
+   custoPadrao =
+  p.custoMedio ??
+  p.custo ??
+  p.custoReposicao ??
+  0.01;
+
   unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
   listaProdutos.innerHTML = "";
 }
@@ -670,6 +689,12 @@ const p = j.items[0];
 produto.value = p.descricao;
 unidadeAuto = p.unidadeDeVenda;
 produtoIdVF = p.id; // ✅ ID VF
+custoPadrao =
+  p.custoMedio ??
+  p.custo ??
+  p.custoReposicao ??
+  0.01;
+
 unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
   }
 };
