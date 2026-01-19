@@ -63,11 +63,11 @@ export default async function handler(req, res) {
       };
 
       const vfResp = await fetch(
-        "https://villachopp.varejofacil.com/api/v1/estoque/requisições",
+        "https://villachopp.varejofacil.com/api/v1/estoque/requisicoes-mercadorias",
         {
           method: "POST",
           headers: {
-            "Authorization": `${vf_token}`,
+            "Authorization": `Bearer ${vf_token}`,
             "Content-Type": "application/json",
             "Accept": "application/json"
           },
