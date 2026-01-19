@@ -1,43 +1,80 @@
-// pages/api/requisicao-sync.js
+import fetch from "node-fetch";
 
 /**
- * AUTENTICA NO VAREJO FÁCIL (API V1)
+ * CONFIGURAÇÕES
  */
-async function gerarTokenVF() {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<Usuario>
-  <username>NALBERT SOUZA</username>
-  <password>99861</password>
-</Usuario>`;
+const VF_BASE_URL = "https://villachopp.varejofacil.com/api";
+const VF_USUARIO = process.env.VF_USUARIO;
+const VF_SENHA = process.env.VF_SENHA;
 
-  const resp = await fetch(
-    "https://villachopp.varejofacil.com/api/v1/auth",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/xml",
-        "Accept": "application/json"
-      },
-      body: xml
-    }
-  );
+/**
+ * AUTENTICAÇÃO NO VAREJO FÁCIL
+ */
+async function autenticarVF() {
+  const response = await fetch(`${VF_BASE_URL}/auth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      usuario: VF_USUARIO,
+      senha: VF_SENHA
+    })
+  });
 
-  const raw = await resp.text();
-
-  console.log("VF AUTH STATUS:", resp.status);
-  console.log("VF AUTH RAW:", raw);
-
-  if (!resp.ok) {
-    throw new Error("Falha na autenticação VF");
+  if (!response.ok) {
+    const erro = await response.text();
+    throw new Error(`Falha na autenticação VF: ${erro}`);
   }
 
-  const json = JSON.parse(raw);
+  const data = await response.json();
 
-  if (!json.accessToken) {
+  if (!data?.token) {
     throw new Error("Token VF não retornado");
   }
 
-  return json.accessToken;
+  return data.token;
+}
+
+/**
+ * CRIAR REQUISIÇÃO NO VF
+ */
+async function criarRequisicaoVF(token, payload) {
+  const response = await fetch(`${VF_BASE_URL}/requisicoes`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const erro = await response.text();
+    throw new Error(`Erro ao criar requisição VF: ${erro}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * ESTORNAR / EXCLUIR REQUISIÇÃO NO VF
+ */
+async function estornarRequisicaoVF(token, requisicaoId) {
+  const response = await fetch(
+    `${VF_BASE_URL}/requisicoes/${requisicaoId}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    }
+  );
+
+  if (!response.ok) {
+    const erro = await response.text();
+    throw new Error(`Erro ao estornar requisição VF: ${erro}`);
+  }
+
+  return true;
 }
 
 /**
@@ -49,165 +86,72 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { requisicao, novoStatus } = req.body;
+    const {
+      status,
+      statusAnterior,
+      requisicaoVFId,
+      produto,
+      quantidade,
+      unidade,
+      observacao
+    } = req.body;
 
-    if (!requisicao || !novoStatus) {
-      return res.status(400).json({
-        error: "requisicao e novoStatus são obrigatórios"
-      });
+    if (!status) {
+      return res.status(400).json({ error: "Status não informado" });
     }
 
-    if (novoStatus === "ENTREGUE" && !requisicao.produto_id_vf) {
-      return res.status(400).json({
-        error: "produto_id_vf não informado"
-      });
-    }
-
-    // 🔐 TOKEN VF (BACKEND)
-    const vf_token = await gerarTokenVF();
-
-    const headersVF = {
-      "Authorization": `${vf_token}`,
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    };
+    const token = await autenticarVF();
 
     /**
-     * =====================================================
-     * 🟢 ENTREGUE → CRIAR REQUISIÇÃO NO VF
-     * =====================================================
+     * CASO: MARCAR COMO ENTREGUE
      */
-    if (novoStatus === "ENTREGUE" && !requisicao.vf_requisicao_id) {
+    if (status === "ENTREGUE") {
+      const payload = {
+        observacao: observacao || "Requisição via sistema",
+        itens: [
+          {
+            descricao: produto,
+            quantidade: Number(quantidade),
+            unidade: unidade || "UN"
+          }
+        ]
+      };
 
-      console.log("CRIANDO REQUISIÇÃO VF...");
-
-      // 1️⃣ CABEÇALHO
-      const respReq = await fetch(
-        "https://villachopp.varejofacil.com/api/v1/estoque/requisicoes",
-        {
-          method: "POST",
-          headers: headersVF,
-          body: JSON.stringify({
-            id: 0,
-            tipo: "TRANSFERENCIA",
-            modelo: "DIRETA",
-            lojaId: requisicao.loja_id,
-            localOrigemId: requisicao.local_origem_id,
-            localDestinoId: requisicao.local_destino_id,
-            setorId: requisicao.setor_id,
-            solicitanteId: requisicao.solicitante_id,
-            motivoRequisicaoId: requisicao.motivo_requisicao_id,
-            observacaoGeral: requisicao.observacao_geral || "REGISTRO VIA API"
-          })
-        }
-      );
-
-      const reqRaw = await respReq.text();
-      console.log("REQ VF STATUS:", respReq.status);
-      console.log("REQ VF RAW:", reqRaw);
-
-      if (!respReq.ok) {
-        return res.status(respReq.status).json({
-          error: "Erro ao criar requisição (cabeçalho)",
-          raw: reqRaw
-        });
-      }
-
-      const reqJson = JSON.parse(reqRaw);
-      const requisicaoVFId = reqJson.id;
-
-      // 2️⃣ ITENS
-      const custo = Number(requisicao.custo) || 0.01;
-
-      const respItens = await fetch(
-        "https://villachopp.varejofacil.com/api/v1/estoque/requisicoes-mercadorias",
-        {
-          method: "POST",
-          headers: headersVF,
-          body: JSON.stringify({
-            requisicaoId: requisicaoVFId,
-            itens: [
-              {
-                produtoId: requisicao.produto_id_vf,
-                quantidadeTransferida: requisicao.quantidade,
-                observacao: requisicao.observacoes || "",
-                custoMedio: custo,
-                custo: custo,
-                custoReposicao: custo,
-                custoFiscal: custo
-              }
-            ]
-          })
-        }
-      );
-
-      const itensRaw = await respItens.text();
-      console.log("ITENS VF STATUS:", respItens.status);
-      console.log("ITENS VF RAW:", itensRaw);
-
-      if (!respItens.ok) {
-        return res.status(respItens.status).json({
-          error: "Erro ao inserir itens na requisição",
-          vf_requisicao_id: requisicaoVFId,
-          raw: itensRaw
-        });
-      }
+      const requisicao = await criarRequisicaoVF(token, payload);
 
       return res.status(200).json({
-        acao: "CRIADA",
-        vf_requisicao_id: requisicaoVFId
+        success: true,
+        action: "CRIADO",
+        requisicaoVFId: requisicao.id
       });
     }
 
     /**
-     * =====================================================
-     * 🔴 ESTORNO
-     * =====================================================
+     * CASO: VOLTAR DE ENTREGUE (ESTORNO)
      */
-    if (
-      requisicao.status === "ENTREGUE" &&
-      novoStatus !== "ENTREGUE" &&
-      requisicao.vf_requisicao_id
-    ) {
-      console.log("ESTORNANDO REQUISIÇÃO VF...");
+    if (statusAnterior === "ENTREGUE" && requisicaoVFId) {
+      await estornarRequisicaoVF(token, requisicaoVFId);
 
-      const delResp = await fetch(
-        `https://villachopp.varejofacil.com/api/v1/estoque/requisicoes/${requisicao.vf_requisicao_id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Authorization": `${vf_token}`,
-            "Accept": "application/json"
-          }
-        }
-      );
-
-      const delRaw = await delResp.text();
-      console.log("DEL VF STATUS:", delResp.status);
-      console.log("DEL VF RAW:", delRaw);
-
-      if (!delResp.ok) {
-        return res.status(delResp.status).json({
-          error: "Erro ao estornar requisição",
-          raw: delRaw
-        });
-      }
-
-      return res.status(200).json({ acao: "ESTORNADA" });
+      return res.status(200).json({
+        success: true,
+        action: "ESTORNADO"
+      });
     }
 
     /**
-     * =====================================================
-     * ⚪ NENHUMA AÇÃO
-     * =====================================================
+     * OUTROS STATUS (APENAS LOCAL)
      */
-    return res.status(200).json({ acao: "NENHUMA" });
+    return res.status(200).json({
+      success: true,
+      action: "STATUS_LOCAL"
+    });
 
-  } catch (err) {
-    console.error("ERRO GERAL VF:", err);
+  } catch (error) {
+    console.error("❌ ERRO requisicao-sync:", error.message);
+
     return res.status(500).json({
       error: "Erro interno",
-      message: err.message
+      message: error.message
     });
   }
 }
