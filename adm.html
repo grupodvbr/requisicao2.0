@@ -239,10 +239,9 @@ let dados=[],registroAtual=null;
 
 
 
-  let vfToken = null;
+let vfToken = null;
 
 async function autenticarVF() {
-  // se já tiver token salvo, reutiliza
   const tokenSalvo = sessionStorage.getItem("vf_token");
   if (tokenSalvo) {
     vfToken = tokenSalvo;
@@ -254,24 +253,23 @@ async function autenticarVF() {
     headers: { "Content-Type": "application/json" }
   });
 
+  const raw = await resp.text();
+
   if (!resp.ok) {
-    const erro = await resp.text();
-    console.error("Erro auth VF:", erro);
-    alert("Erro ao autenticar no Varejo Fácil");
-    throw new Error("Auth VF falhou");
+    console.error("Erro auth VF:", raw);
+    throw new Error("Falha na autenticação VF");
   }
 
-  const json = await resp.json();
+  const json = JSON.parse(raw);
 
-  if (!json.token) {
-    throw new Error("Token VF não retornado");
+  if (!json.accessToken) {
+    throw new Error("AccessToken VF não retornado");
   }
 
-  // ✅ guarda o token
-  vfToken = json.token;
-  sessionStorage.setItem("vf_token", json.token);
+  vfToken = json.accessToken;
+  sessionStorage.setItem("vf_token", json.accessToken);
 
-  return json.token;
+  return json.accessToken;
 }
 
 
