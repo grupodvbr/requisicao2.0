@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 /**
  * CONFIGURAÇÕES
  */
@@ -56,7 +54,7 @@ async function criarRequisicaoVF(token, payload) {
 }
 
 /**
- * ESTORNAR / EXCLUIR REQUISIÇÃO NO VF
+ * ESTORNAR REQUISIÇÃO NO VF
  */
 async function estornarRequisicaoVF(token, requisicaoId) {
   const response = await fetch(
@@ -78,7 +76,7 @@ async function estornarRequisicaoVF(token, requisicaoId) {
 }
 
 /**
- * HANDLER PRINCIPAL
+ * HANDLER
  */
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -96,15 +94,9 @@ export default async function handler(req, res) {
       observacao
     } = req.body;
 
-    if (!status) {
-      return res.status(400).json({ error: "Status não informado" });
-    }
-
     const token = await autenticarVF();
 
-    /**
-     * CASO: MARCAR COMO ENTREGUE
-     */
+    // ✅ ENTREGUE → cria requisição no VF
     if (status === "ENTREGUE") {
       const payload = {
         observacao: observacao || "Requisição via sistema",
@@ -126,9 +118,7 @@ export default async function handler(req, res) {
       });
     }
 
-    /**
-     * CASO: VOLTAR DE ENTREGUE (ESTORNO)
-     */
+    // 🔄 Voltar de ENTREGUE → estorna
     if (statusAnterior === "ENTREGUE" && requisicaoVFId) {
       await estornarRequisicaoVF(token, requisicaoVFId);
 
@@ -138,20 +128,18 @@ export default async function handler(req, res) {
       });
     }
 
-    /**
-     * OUTROS STATUS (APENAS LOCAL)
-     */
+    // ℹ️ Outros status
     return res.status(200).json({
       success: true,
       action: "STATUS_LOCAL"
     });
 
-  } catch (error) {
-    console.error("❌ ERRO requisicao-sync:", error.message);
+  } catch (err) {
+    console.error("❌ ERRO requisicao-sync:", err);
 
     return res.status(500).json({
       error: "Erro interno",
-      message: error.message
+      message: err.message
     });
   }
 }
