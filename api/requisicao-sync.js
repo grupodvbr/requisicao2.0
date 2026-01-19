@@ -1,3 +1,38 @@
+// pages/api/requisicao-sync.js
+
+async function gerarTokenVF() {
+  // XML EXATAMENTE IGUAL AO POSTMAN
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Usuario>
+  <username>NALBERT SOUZA</username>
+  <password>99861</password>
+</Usuario>`;
+
+  const response = await fetch(
+    "https://villachopp.varejofacil.com/api/auth",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/xml",
+        "Accept": "application/json"
+      },
+      body: xml
+    }
+  );
+
+  const raw = await response.text();
+
+  console.log("VF AUTH STATUS:", response.status);
+  console.log("VF AUTH RAW:", raw);
+
+  if (!response.ok) {
+    throw new Error("Falha ao autenticar no Varejo Fácil");
+  }
+
+  const json = JSON.parse(raw);
+  return json.accessToken;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Método não permitido" });
@@ -8,11 +43,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Body vazio" });
     }
 
-    const { requisicao, novoStatus, vf_token } = req.body;
+    const { requisicao, novoStatus } = req.body;
 
-    if (!requisicao || !novoStatus || !vf_token) {
+    if (!requisicao || !novoStatus) {
       return res.status(400).json({
-        error: "requisicao, novoStatus e vf_token são obrigatórios"
+        error: "requisicao e novoStatus são obrigatórios"
       });
     }
 
@@ -21,6 +56,9 @@ export default async function handler(req, res) {
         error: "produto_id_vf não informado"
       });
     }
+
+    // 🔐 TOKEN GERADO NO BACKEND
+    const vf_token = await gerarTokenVF();
 
     const headersVF = {
       "Authorization": `Bearer ${vf_token}`,
@@ -33,7 +71,7 @@ export default async function handler(req, res) {
     // =====================================================
     if (novoStatus === "ENTREGUE" && !requisicao.vf_requisicao_id) {
 
-      // 1️⃣ CRIA A REQUISIÇÃO (CABEÇALHO)
+      // 1️⃣ CABEÇALHO
       const respReq = await fetch(
         "https://villachopp.varejofacil.com/api/v1/estoque/requisicoes",
         {
@@ -66,7 +104,7 @@ export default async function handler(req, res) {
       const reqJson = JSON.parse(reqText);
       const requisicaoVFId = reqJson.id;
 
-      // 2️⃣ ADICIONA OS ITENS
+      // 2️⃣ ITENS
       const custo = Number(requisicao.custo) || 0.01;
 
       const respItens = await fetch(
@@ -108,7 +146,7 @@ export default async function handler(req, res) {
     }
 
     // =====================================================
-    // 🔴 ESTORNO (ENTREGUE → OUTRO STATUS)
+    // 🔴 ESTORNO
     // =====================================================
     if (
       requisicao.status === "ENTREGUE" &&
@@ -126,10 +164,11 @@ export default async function handler(req, res) {
         }
       );
 
+      const delText = await delResp.text();
+
       if (!delResp.ok) {
-        const delText = await delResp.text();
         return res.status(delResp.status).json({
-          error: "Erro ao estornar requisição no Varejo Fácil",
+          error: "Erro ao estornar requisição",
           raw: delText
         });
       }
