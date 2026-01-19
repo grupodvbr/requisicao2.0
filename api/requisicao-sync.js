@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     const vf_token = await gerarTokenVF();
 
     const headersVF = {
-      "Authorization": `Bearer ${vf_token}`,
+      "Authorization": `${vf_token}`,
       "Content-Type": "application/json",
       "Accept": "application/json"
     };
@@ -176,7 +176,7 @@ export default async function handler(req, res) {
         {
           method: "DELETE",
           headers: {
-            "Authorization": `Bearer ${vf_token}`,
+            "Authorization": `${vf_token}`,
             "Accept": "application/json"
           }
         }
