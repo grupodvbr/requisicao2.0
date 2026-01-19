@@ -308,11 +308,11 @@ async function mudarStatus(id, novoStatus) {
   const resp = await fetch("/api/requisicao-sync", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      requisicao,
-      novoStatus,
-      vf_token: localStorage.getItem("vf_token")
-    })
+body: JSON.stringify({
+  requisicao,
+  novoStatus
+})
+
   });
 
   const text = await resp.text();
