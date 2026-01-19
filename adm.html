@@ -294,7 +294,6 @@ function render(lista){
 
 async function mudarStatus(id, novoStatus) {
 
-  // 🔥 BUSCA A REQUISIÇÃO COMPLETA NO SUPABASE
   const { data: requisicao, error } = await sb
     .from("requisicoes")
     .select("*")
@@ -308,9 +307,7 @@ async function mudarStatus(id, novoStatus) {
 
   const resp = await fetch("/api/requisicao-sync", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       requisicao,
       novoStatus,
@@ -328,9 +325,6 @@ async function mudarStatus(id, novoStatus) {
 
   const json = JSON.parse(text);
 
-  console.log("SYNC OK:", json);
-
-  // 🔥 ATUALIZA STATUS LOCAL
   await sb
     .from("requisicoes")
     .update({
@@ -340,20 +334,22 @@ async function mudarStatus(id, novoStatus) {
       vf_enviado_em: new Date().toISOString()
     })
     .eq("id", id);
-}
 
-
-const rLocal = dados.find(d => d.id === id);
-if (rLocal) {
-  rLocal.status = novoStatus;
-  if (update.vf_requisicao_id) {
-    rLocal.vf_requisicao_id = update.vf_requisicao_id;
+  // ✅ ATUALIZA LOCAL
+  const rLocal = dados.find(d => d.id === id);
+  if (rLocal) {
+    rLocal.status = novoStatus;
+    if (json.vf_requisicao_id) {
+      rLocal.vf_requisicao_id = json.vf_requisicao_id;
+    }
   }
-}
 
-
+  filtrar();
   calcularResumo();
 }
+
+
+
 
 
 /* RESUMO */
