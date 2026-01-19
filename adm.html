@@ -229,6 +229,56 @@ const sb=supabase.createClient(
 
 let dados=[],registroAtual=null;
 
+
+
+
+
+
+
+
+
+
+
+  let vfToken = null;
+
+async function autenticarVF() {
+  // se já tiver token salvo, reutiliza
+  const tokenSalvo = sessionStorage.getItem("vf_token");
+  if (tokenSalvo) {
+    vfToken = tokenSalvo;
+    return tokenSalvo;
+  }
+
+  const resp = await fetch("/api/auth", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  if (!resp.ok) {
+    const erro = await resp.text();
+    console.error("Erro auth VF:", erro);
+    alert("Erro ao autenticar no Varejo Fácil");
+    throw new Error("Auth VF falhou");
+  }
+
+  const json = await resp.json();
+
+  if (!json.token) {
+    throw new Error("Token VF não retornado");
+  }
+
+  // ✅ guarda o token
+  vfToken = json.token;
+  sessionStorage.setItem("vf_token", json.token);
+
+  return json.token;
+}
+
+
+
+
+
+  
 /* LOAD */
 async function carregar(){
  const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
@@ -237,7 +287,10 @@ async function carregar(){
  filtrar();
  calcularResumo();
 }
-carregar();
+(async () => {
+  await autenticarVF(); // 🔐 AUTH PRIMEIRO
+  await carregar();     // 📊 depois carrega dados
+})();
 
 /* FILTROS */
 function preencherFiltros(){
@@ -309,9 +362,11 @@ async function mudarStatus(id, novoStatus) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
 body: JSON.stringify({
+  token: vfToken,        // 👈 AQUI
   requisicao,
   novoStatus
 })
+
 
   });
 
