@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Análise de Fichas Técnicas • CLENA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+:root{
+  --bg:#f4f6f8;
+  --card:#ffffff;
+  --primary:#2563eb;
+  --success:#16a34a;
+  --danger:#dc2626;
+  --text:#0f172a;
+  --muted:#64748b;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  padding:18px;
+  background:var(--bg);
+  font-family:Inter,Arial,sans-serif;
+  color:var(--text);
+}
+
+h1{
+  margin:0 0 18px;
+  font-size:24px;
+  font-weight:800;
+}
+
+.container{
+  max-width:1200px;
+  margin:auto;
+}
+
+/* ================= GRID ================= */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:18px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:22px;
+  padding:14px;
+  box-shadow:0 20px 40px rgba(0,0,0,.1);
+  cursor:pointer;
+  transition:.2s;
+}
+
+.card:hover{
+  transform:translateY(-4px);
+}
+
+.card img{
+  width:100%;
+  height:160px;
+  object-fit:cover;
+  border-radius:16px;
+}
+
+.card h3{
+  margin:12px 0 6px;
+  font-size:16px;
+  font-weight:800;
+}
+
+.card .info{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px;
+  margin-top:10px;
+}
+
+.kpi{
+  background:#f8fafc;
+  border-radius:14px;
+  padding:10px;
+  text-align:center;
+  font-weight:800;
+  font-size:13px;
+}
+
+.kpi.success{color:var(--success)}
+.kpi.danger{color:var(--danger)}
+
+/* ================= MODAL ================= */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
+
+.modal-box{
+  background:#fff;
+  max-width:560px;
+  width:92%;
+  border-radius:26px;
+  padding:22px;
+  max-height:90vh;
+  overflow:auto;
+}
+
+.modal img{
+  width:100%;
+  border-radius:18px;
+  margin-bottom:14px;
+}
+
+.modal h2{
+  margin:0 0 10px;
+  font-size:20px;
+  font-weight:800;
+}
+
+.modal .kpis{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.modal ul{
+  padding-left:18px;
+  margin-top:10px;
+}
+
+.btn-close{
+  margin-top:14px;
+  width:100%;
+  padding:14px;
+  border-radius:16px;
+  border:none;
+  background:var(--primary);
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>📊 Análise de Fichas Técnicas</h1>
+
+<div id="grid" class="grid"></div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="modal" onclick="fecharModal(event)">
+  <div class="modal-box">
+    <img id="mFoto">
+    <h2 id="mNome"></h2>
+
+    <div class="kpis">
+      <div class="kpi">Venda<br>R$ <span id="mVenda"></span></div>
+      <div class="kpi">CMV<br>R$ <span id="mCmv"></span></div>
+      <div class="kpi success">Lucro<br>R$ <span id="mLucro"></span></div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi">Rendimento<br><span id="mRend"></span></div>
+      <div class="kpi">Lucro %<br><span id="mLucroPerc"></span>%</div>
+      <div class="kpi">CMV %<br><span id="mCmvPerc"></span>%</div>
+    </div>
+
+    <h3>Ingredientes</h3>
+    <ul id="mIng"></ul>
+
+    <button class="btn-close" onclick="modal.style.display='none'">Fechar</button>
+  </div>
+</div>
+
+<script>
+const sb = supabase.createClient(
+  "https://dsngsuetvucxeztbgbtb.supabase.co",
+  "sb_publishable_rN6fZXNxnjgwnbXTPXEP5A_7n5Ty9Cp"
+);
+async function carregar(){
+  const {data}=await sb.from("ficha_tecnica").select("*").order("produto_nome");
+  grid.innerHTML="";
+
+  data.forEach(f=>{
+    const venda = Number(f.preco_venda||0);
+    const cmv = Number(f.custo_unitario||0);
+    const lucro = venda - cmv;
+    const lucroPerc = venda ? (lucro/venda*100) : 0;
+
+    grid.insertAdjacentHTML("beforeend",`
+      <div class="card" onclick='abrir(${JSON.stringify(f)})'>
+        <img src="${f.foto_url || "https://via.placeholder.com/400x250?text=Sem+Imagem"}">
+        <h3>${f.produto_nome}</h3>
+        <div class="info">Venda: R$ ${venda.toFixed(2)}</div>
+        <div class="info">Custo: R$ ${cmv.toFixed(2)}</div>
+
+        <div class="kpis">
+          <div class="kpi success">R$ ${lucro.toFixed(2)}</div>
+          <div class="kpi ${lucro>=0?'success':'danger'}">${lucroPerc.toFixed(1)}%</div>
+        </div>
+      </div>
+    `);
+  });
+}
+
+function abrir(f){
+  const venda=Number(f.preco_venda||0);
+  const cmv=Number(f.custo_unitario||0);
+  const lucro=venda-cmv;
+
+  mFoto.src=f.foto_url||"https://via.placeholder.com/400x250?text=Sem+Imagem";
+  mNome.innerText=f.produto_nome;
+  mVenda.innerText=venda.toFixed(2);
+  mCmv.innerText=cmv.toFixed(2);
+  mLucro.innerText=lucro.toFixed(2);
+  mLucroPerc.innerText=(venda?lucro/venda*100:0).toFixed(1);
+  mCmvPerc.innerText=(venda?cmv/venda*100:0).toFixed(1);
+  mRend.innerText=f.rendimento;
+
+  mIng.innerHTML=(f.receita||[]).map(i=>`
+    <li>${i.nome} — R$ ${Number(i.custo_total||0).toFixed(2)}</li>
+  `).join("");
+
+  modal.style.display="flex";
+}
+
+function fecharModal(e){
+  if(e.target.id==="modal") modal.style.display="none";
+}
+
+carregar();
+</script>
+</body>
+</html>
