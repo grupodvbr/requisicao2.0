@@ -6,11 +6,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    /* ===== AUTH (reutiliza a que você já tem) ===== */
     const baseUrl = req.headers.host.includes("localhost")
       ? "http://localhost:3000"
       : `https://${req.headers.host}`;
 
+    // 🔐 AUTH
     const authResp = await fetch(`${baseUrl}/api/auth`);
     const auth = await authResp.json();
 
@@ -18,8 +18,13 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Token não retornado" });
     }
 
-    /* ===== CHAMADA VAREJO FÁCIL ===== */
-    const url = `https://villchopp.varejofacil.com/api/v1/produto/precos?q=produtoId==${produtoId}&start=0&count=1`;
+    // 🔥 IMPORTANTE: lojaId OBRIGATÓRIO
+    const LOJA_ID = 2;
+
+    const url =
+      `https://villchopp.varejofacil.com/api/v1/produto/precos` +
+      `?q=produtoId==${produtoId};lojaId==${LOJA_ID}` +
+      `&start=0&count=5`;
 
     const resp = await fetch(url, {
       headers: {
@@ -32,7 +37,7 @@ export default async function handler(req, res) {
 
     if (!resp.ok) {
       return res.status(resp.status).json({
-        error: "Erro ao buscar preço",
+        error: "Erro VF",
         raw
       });
     }
@@ -41,7 +46,7 @@ export default async function handler(req, res) {
 
   } catch (err) {
     return res.status(500).json({
-      error: "Erro interno produto-preco",
+      error: "Erro interno",
       message: err.message
     });
   }
