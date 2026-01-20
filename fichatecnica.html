@@ -2,92 +2,34 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Ficha Técnica • CMV</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ficha Técnica • Cadastro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{
-  margin:0;
-  padding:16px;
-  background:#f4f6f8;
-  font-family:Inter,Arial,sans-serif;
-}
-.container{
-  max-width:640px;
-  margin:auto;
-  background:#fff;
-  border-radius:24px;
-  padding:22px;
-  box-shadow:0 20px 50px rgba(0,0,0,.12);
-}
-h1{margin:0 0 14px;font-size:22px;font-weight:800}
-label{font-size:13px;font-weight:800;margin-top:14px;display:block}
-input,select,button{
-  width:100%;
-  padding:14px;
-  border-radius:14px;
-  border:1px solid #cbd5e1;
-  margin-top:6px;
-}
-button{
-  background:#2563eb;
-  color:#fff;
-  font-weight:800;
-  border:none;
-  cursor:pointer;
-}
-.badge{
-  display:inline-block;
-  margin-top:8px;
-  padding:6px 14px;
-  border-radius:999px;
-  background:#e0f2fe;
-  font-weight:800;
-}
-.lista .item{
-  background:#f1f5f9;
-  padding:12px;
-  border-radius:12px;
-  margin-top:6px;
-  cursor:pointer;
-}
-.lista .item:hover{background:#e2e8f0}
-.grid{
-  display:grid;
-  grid-template-columns:2fr 1fr 1fr 1fr auto;
-  gap:6px;
-  margin-top:10px;
-}
-.total{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-  margin-top:14px;
-}
-.total div{
-  background:#f8fafc;
-  padding:12px;
-  border-radius:12px;
-  text-align:center;
-  font-weight:800;
-}
-hr{margin:18px 0}
+body{margin:0;padding:16px;background:#f4f6f8;font-family:Inter}
+.container{max-width:860px;margin:auto;background:#fff;border-radius:24px;padding:24px;box-shadow:0 30px 60px rgba(0,0,0,.1)}
+h1{margin:0 0 20px;font-weight:800}
+label{font-weight:800;font-size:13px;margin-top:14px;display:block}
+input,button{width:100%;padding:14px;border-radius:14px;border:1px solid #cbd5e1;margin-top:6px}
+button{background:#2563eb;color:#fff;font-weight:800;border:none}
+.lista .item{background:#f1f5f9;padding:12px;border-radius:12px;margin-top:6px;cursor:pointer}
+.grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
+.kpi{background:#f8fafc;border-radius:16px;padding:16px;text-align:center;font-weight:800}
+img{width:100%;border-radius:18px;margin-top:10px}
 </style>
 </head>
 
 <body>
 <div class="container">
+<h1>📋 Ficha Técnica</h1>
 
-<h1>📋 Ficha Técnica • CMV</h1>
-
-<!-- PRODUTO -->
-<label>Produto (prato)</label>
+<label>Produto</label>
 <input id="buscaProduto">
 <div id="listaProduto" class="lista"></div>
-<div id="unProduto" class="badge"></div>
 
 <label>Imagem do prato</label>
 <input type="file" id="foto">
@@ -101,10 +43,10 @@ hr{margin:18px 0}
 <div id="listaIngrediente" class="lista"></div>
 
 <div class="grid">
-  <input id="qtdIng" type="number" placeholder="Qtd usada">
-  <input id="unIng" readonly placeholder="Un">
-  <input id="custoIng" readonly placeholder="Custo">
-  <input id="rendIng" type="number" placeholder="Rend %">
+  <input id="qtd" type="number" placeholder="Qtd usada">
+  <input id="un" readonly placeholder="Un">
+  <input id="custo" readonly placeholder="Custo">
+  <input id="rend" type="number" placeholder="Rend %">
   <button onclick="addIngrediente()">+</button>
 </div>
 
@@ -112,133 +54,69 @@ hr{margin:18px 0}
 
 <hr>
 
-<label>Rendimento final do prato (porções)</label>
+<label>Rendimento final</label>
 <input id="rendimentoFinal" type="number" value="1">
 
-<div class="total">
-  <div>CMV Total<br>R$ <span id="cmvTotal">0.00</span></div>
-  <div>CMV Unitário<br>R$ <span id="cmvUnit">0.00</span></div>
-  <div>CMV %<br><span id="cmvPerc">0</span>%</div>
+<div class="kpis">
+  <div class="kpi">CMV Total<br>R$ <span id="cmvTotal">0.00</span></div>
+  <div class="kpi">CMV Unit<br>R$ <span id="cmvUnit">0.00</span></div>
+  <div class="kpi">Preço Venda<br>R$ <span id="precoVenda">0.00</span></div>
+  <div class="kpi">Margem<br><span id="margem">0</span>%</div>
 </div>
 
-<hr>
-
-<h3>💰 Precificação</h3>
-
-<label>% de CMV desejado</label>
-<input id="percCmvDesejado" type="number" placeholder="Ex: 30">
-
-<label>OU % de margem desejada</label>
-<input id="percMargemDesejada" type="number" placeholder="Ex: 70">
-
-<label>Preço de venda sugerido</label>
-<input id="precoVenda" readonly>
-
-<button onclick="calcularPreco()">Calcular Preço</button>
-
-<hr>
-
 <button onclick="salvar()">Salvar Ficha Técnica</button>
-
 </div>
 
 <script>
-const sb = supabase.createClient(
-  "https://dsngsuetvucxeztbgbtb.supabase.co",
-  "sb_publishable_rN6fZXNxnjgwnbXTPXEP5A_7n5Ty9Cp"
-);
+const sb = supabase.createClient("https://dsngsuetvucxeztbgbtb.supabase.co","sb_publishable_rN6fZXNxnjgwnbXTPXEP5A_7n5Ty9Cp");
 
-let produto=null;
-let ingredienteAtual=null;
-let ingredientes=[];
-let cmvTotal=0;
+let produto=null, ingrediente=null, ingredientes=[], cmv=0, preco=0;
 
-/* ===== BUSCA PRODUTO ===== */
 buscaProduto.onkeyup=async()=>{
-  const q=buscaProduto.value.trim();
-  if(q.length<2) return listaProduto.innerHTML="";
-  const r=await fetch(`/api/produtos-busca?q=${encodeURIComponent(q)}`);
+  if(buscaProduto.value.length<2)return listaProduto.innerHTML="";
+  const r=await fetch(`/api/produtos-busca?q=${buscaProduto.value}`);
   const j=await r.json();
   listaProduto.innerHTML="";
-  (j.items||[]).forEach(p=>{
+  j.items.forEach(p=>{
     listaProduto.innerHTML+=`<div class="item" onclick='selectProduto(${JSON.stringify(p)})'>${p.descricao}</div>`;
   });
 };
 function selectProduto(p){
   produto=p;
-  buscaProduto.value=p.descricao;
-  unProduto.innerText=p.unidadeDeVenda;
+  preco=p.precoVenda1||0;
+  precoVenda.innerText=preco.toFixed(2);
   listaProduto.innerHTML="";
 }
 
-/* ===== BUSCA INGREDIENTE ===== */
 buscaIngrediente.onkeyup=async()=>{
-  const q=buscaIngrediente.value.trim();
-  if(q.length<2) return listaIngrediente.innerHTML="";
-  const r=await fetch(`/api/produtos-busca?q=${encodeURIComponent(q)}`);
+  if(buscaIngrediente.value.length<2)return listaIngrediente.innerHTML="";
+  const r=await fetch(`/api/produtos-busca?q=${buscaIngrediente.value}`);
   const j=await r.json();
   listaIngrediente.innerHTML="";
-  (j.items||[]).forEach(p=>{
-    listaIngrediente.innerHTML+=`<div class="item" onclick='selectIngrediente(${JSON.stringify(p)})'>${p.descricao}</div>`;
+  j.items.forEach(p=>{
+    listaIngrediente.innerHTML+=`<div class="item" onclick='selectIng(${JSON.stringify(p)})'>${p.descricao}</div>`;
   });
 };
-function selectIngrediente(p){
-  ingredienteAtual=p;
-  buscaIngrediente.value=p.descricao;
-  unIng.value=p.unidadeDeVenda;
-  custoIng.value=(p.custoMedio ?? p.custo ?? p.custoReposicao ?? 0).toFixed(2);
+function selectIng(p){
+  ingrediente=p;
+  un.value=p.unidadeDeVenda;
+  custo.value=(p.custoMedio||p.custo||0).toFixed(2);
   listaIngrediente.innerHTML="";
 }
 
-/* ===== ADD INGREDIENTE ===== */
 function addIngrediente(){
-  const qtd=Number(qtdIng.value);
-  const custo=Number(custoIng.value);
-  const rend=Number(rendIng.value||100);
-
-  const custoReal=(qtd*custo)*(rend/100);
-
-  ingredientes.push({
-    id:ingredienteAtual.id,
-    nome:ingredienteAtual.descricao,
-    unidade:unIng.value,
-    quantidade:qtd,
-    custo_unit:custo,
-    rendimento:rend,
-    custo_total:custoReal
-  });
-
-  cmvTotal+=custoReal;
+  const c=(qtd.value*custo.value)*(rend.value/100||1);
+  ingredientes.push({nome:ingrediente.descricao,custo:c});
+  cmv+=c;
   render();
 }
-
-/* ===== RENDER ===== */
 function render(){
-  listaIng.innerHTML=ingredientes.map(i=>
-    `<p>${i.nome} → R$ ${i.custo_total.toFixed(2)}</p>`
-  ).join("");
-
-  const rendFinal=Number(rendimentoFinal.value||1);
-  cmvTotalSpan.innerText=cmvTotal.toFixed(2);
-  cmvUnit.innerText=(cmvTotal/rendFinal).toFixed(2);
+  listaIng.innerHTML=ingredientes.map(i=>`<p>${i.nome} - R$ ${i.custo.toFixed(2)}</p>`).join("");
+  cmvTotal.innerText=cmv.toFixed(2);
+  cmvUnit.innerText=(cmv/rendimentoFinal.value).toFixed(2);
+  margem.innerText=preco?(((preco-cmv)/preco)*100).toFixed(1):0;
 }
 
-/* ===== CALCULAR PREÇO ===== */
-function calcularPreco(){
-  const cmvUnitario=Number(cmvUnit.innerText);
-  let preco=0;
-
-  if(percCmvDesejado.value){
-    preco = cmvUnitario / (percCmvDesejado.value/100);
-  }else if(percMargemDesejada.value){
-    preco = cmvUnitario / (1 - percMargemDesejada.value/100);
-  }
-
-  precoVenda.value = preco.toFixed(2);
-  cmvPerc.innerText = ((cmvUnitario/preco)*100).toFixed(1);
-}
-
-/* ===== SALVAR ===== */
 async function salvar(){
   let fotoUrl=null;
   if(foto.files[0]){
@@ -246,24 +124,17 @@ async function salvar(){
     await sb.storage.from("ficha_tecnica").upload(path,foto.files[0]);
     fotoUrl=sb.storage.from("ficha_tecnica").getPublicUrl(path).data.publicUrl;
   }
-
   await sb.from("ficha_tecnica").insert({
-    produto_id:produto.id,
     produto_nome:produto.descricao,
-    unidade_produto:produto.unidadeDeVenda,
     receita:ingredientes,
-    rendimento:rendimentoFinal.value,
-    custo_total:cmvTotal,
-    custo_unitario:cmvTotal/rendimentoFinal.value,
-    preco_venda:precoVenda.value,
-    perc_cmv:percCmvDesejado.value,
-    perc_margem:percMargemDesejada.value,
+    custo_total:cmv,
+    custo_unitario:cmv/rendimentoFinal.value,
+    preco_venda:preco,
+    margem,
     foto_url:fotoUrl
   });
-
-  alert("Ficha técnica salva com sucesso");
+  alert("Ficha salva");
 }
 </script>
-
 </body>
 </html>
