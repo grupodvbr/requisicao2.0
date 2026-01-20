@@ -10,15 +10,16 @@
 
 <style>
 body{margin:0;padding:16px;background:#f4f6f8;font-family:Inter}
-.container{max-width:860px;margin:auto;background:#fff;border-radius:24px;padding:24px;box-shadow:0 30px 60px rgba(0,0,0,.1)}
+.container{max-width:900px;margin:auto;background:#fff;border-radius:26px;padding:26px;box-shadow:0 30px 60px rgba(0,0,0,.12)}
 h1{margin:0 0 20px;font-weight:800}
 label{font-weight:800;font-size:13px;margin-top:14px;display:block}
 input,button{width:100%;padding:14px;border-radius:14px;border:1px solid #cbd5e1;margin-top:6px}
-button{background:#2563eb;color:#fff;font-weight:800;border:none}
+button{background:#2563eb;color:#fff;font-weight:800;border:none;cursor:pointer}
 .lista .item{background:#f1f5f9;padding:12px;border-radius:12px;margin-top:6px;cursor:pointer}
 .grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}
 .kpi{background:#f8fafc;border-radius:16px;padding:16px;text-align:center;font-weight:800}
+.badge{display:inline-block;margin-top:8px;padding:6px 14px;border-radius:999px;background:#e0f2fe;font-weight:800}
 img{width:100%;border-radius:18px;margin-top:10px}
 </style>
 </head>
@@ -27,25 +28,28 @@ img{width:100%;border-radius:18px;margin-top:10px}
 <div class="container">
 <h1>📋 Ficha Técnica</h1>
 
-<label>Produto</label>
-<input id="buscaProduto">
+<!-- PRODUTO -->
+<label>Produto (prato)</label>
+<input id="buscaProduto" placeholder="Digite o nome do produto">
 <div id="listaProduto" class="lista"></div>
+<div id="infoProduto" class="badge"></div>
 
 <label>Imagem do prato</label>
 <input type="file" id="foto">
 
 <hr>
 
+<!-- INGREDIENTES -->
 <h3>🍳 Ingredientes</h3>
 
 <label>Buscar ingrediente</label>
-<input id="buscaIngrediente">
+<input id="buscaIngrediente" placeholder="Digite o nome do ingrediente">
 <div id="listaIngrediente" class="lista"></div>
 
 <div class="grid">
   <input id="qtd" type="number" placeholder="Qtd usada">
   <input id="un" readonly placeholder="Un">
-  <input id="custo" readonly placeholder="Custo">
+  <input id="custo" readonly placeholder="Custo unit">
   <input id="rend" type="number" placeholder="Rend %">
   <button onclick="addIngrediente()">+</button>
 </div>
@@ -54,7 +58,7 @@ img{width:100%;border-radius:18px;margin-top:10px}
 
 <hr>
 
-<label>Rendimento final</label>
+<label>Rendimento final (porções)</label>
 <input id="rendimentoFinal" type="number" value="1">
 
 <div class="kpis">
@@ -68,72 +72,141 @@ img{width:100%;border-radius:18px;margin-top:10px}
 </div>
 
 <script>
-const sb = supabase.createClient("https://dsngsuetvucxeztbgbtb.supabase.co","sb_publishable_rN6fZXNxnjgwnbXTPXEP5A_7n5Ty9Cp");
+/* ===== SUPABASE ===== */
+const sb = supabase.createClient(
+  "https://dsngsuetvucxeztbgbtb.supabase.co",
+  "sb_publishable_rN6fZXNxnjgwnbXTPXEP5A_7n5Ty9Cp"
+);
 
-let produto=null, ingrediente=null, ingredientes=[], cmv=0, preco=0;
+/* ===== ESTADO ===== */
+let produtoSelecionado=null;
+let ingredienteSelecionado=null;
+let ingredientes=[];
+let cmvTotal=0;
 
-buscaProduto.onkeyup=async()=>{
-  if(buscaProduto.value.length<2)return listaProduto.innerHTML="";
-  const r=await fetch(`/api/produtos-busca?q=${buscaProduto.value}`);
-  const j=await r.json();
-  listaProduto.innerHTML="";
-  j.items.forEach(p=>{
-    listaProduto.innerHTML+=`<div class="item" onclick='selectProduto(${JSON.stringify(p)})'>${p.descricao}</div>`;
+/* ===== BUSCAR PRODUTO ===== */
+buscaProduto.onkeyup = async () => {
+  if (buscaProduto.value.length < 2) return listaProduto.innerHTML = "";
+  const r = await fetch(`/api/produtos-busca?q=${encodeURIComponent(buscaProduto.value)}`);
+  const j = await r.json();
+  listaProduto.innerHTML = "";
+  j.items.forEach(p => {
+    listaProduto.innerHTML += `
+      <div class="item" onclick='selecionarProduto(${JSON.stringify(p)})'>
+        ${p.descricao}
+      </div>`;
   });
 };
-function selectProduto(p){
-  produto=p;
-  preco=p.precoVenda1||0;
-  precoVenda.innerText=preco.toFixed(2);
-  listaProduto.innerHTML="";
+
+async function selecionarProduto(p){
+  const r = await fetch(`/api/produto-completo?produtoId=${p.id}`);
+  const j = await r.json();
+
+  produtoSelecionado = {
+    id: j.produto.id,
+    nome: j.produto.nome,
+    unidade: j.produto.unidade,
+    preco_venda: j.preco.venda
+  };
+
+  precoVenda.innerText = produtoSelecionado.preco_venda.toFixed(2);
+  infoProduto.innerText = `${produtoSelecionado.unidade}`;
+  listaProduto.innerHTML = "";
 }
 
-buscaIngrediente.onkeyup=async()=>{
-  if(buscaIngrediente.value.length<2)return listaIngrediente.innerHTML="";
-  const r=await fetch(`/api/produtos-busca?q=${buscaIngrediente.value}`);
-  const j=await r.json();
-  listaIngrediente.innerHTML="";
-  j.items.forEach(p=>{
-    listaIngrediente.innerHTML+=`<div class="item" onclick='selectIng(${JSON.stringify(p)})'>${p.descricao}</div>`;
+/* ===== BUSCAR INGREDIENTE ===== */
+buscaIngrediente.onkeyup = async () => {
+  if (buscaIngrediente.value.length < 2) return listaIngrediente.innerHTML = "";
+  const r = await fetch(`/api/produtos-busca?q=${encodeURIComponent(buscaIngrediente.value)}`);
+  const j = await r.json();
+  listaIngrediente.innerHTML = "";
+  j.items.forEach(p => {
+    listaIngrediente.innerHTML += `
+      <div class="item" onclick='selecionarIngrediente(${JSON.stringify(p)})'>
+        ${p.descricao}
+      </div>`;
   });
 };
-function selectIng(p){
-  ingrediente=p;
-  un.value=p.unidadeDeVenda;
-  custo.value=(p.custoMedio||p.custo||0).toFixed(2);
-  listaIngrediente.innerHTML="";
+
+async function selecionarIngrediente(p){
+  const r = await fetch(`/api/produto-completo?produtoId=${p.id}`);
+  const j = await r.json();
+
+  ingredienteSelecionado = {
+    id: j.produto.id,
+    nome: j.produto.nome,
+    unidade: j.produto.unidade,
+    custo_unitario: j.custo.custoProduto
+  };
+
+  un.value = ingredienteSelecionado.unidade;
+  custo.value = ingredienteSelecionado.custo_unitario.toFixed(2);
+  listaIngrediente.innerHTML = "";
 }
 
+/* ===== ADD INGREDIENTE ===== */
 function addIngrediente(){
-  const c=(qtd.value*custo.value)*(rend.value/100||1);
-  ingredientes.push({nome:ingrediente.descricao,custo:c});
-  cmv+=c;
+  if (!ingredienteSelecionado) return;
+
+  const qtdUsada = Number(qtd.value);
+  const rendimento = Number(rend.value || 100);
+  const custoReal = qtdUsada * ingredienteSelecionado.custo_unitario * (rendimento / 100);
+
+  const item = {
+    produto_id: ingredienteSelecionado.id,
+    nome: ingredienteSelecionado.nome,
+    unidade: ingredienteSelecionado.unidade,
+    quantidade_usada: qtdUsada,
+    custo_unitario: ingredienteSelecionado.custo_unitario,
+    rendimento,
+    custo_total: custoReal
+  };
+
+  ingredientes.push(item);
+  cmvTotal += custoReal;
+
   render();
 }
+
+/* ===== RENDER ===== */
 function render(){
-  listaIng.innerHTML=ingredientes.map(i=>`<p>${i.nome} - R$ ${i.custo.toFixed(2)}</p>`).join("");
-  cmvTotal.innerText=cmv.toFixed(2);
-  cmvUnit.innerText=(cmv/rendimentoFinal.value).toFixed(2);
-  margem.innerText=preco?(((preco-cmv)/preco)*100).toFixed(1):0;
+  listaIng.innerHTML = ingredientes.map(i =>
+    `<p>${i.nome} (${i.unidade}) — R$ ${i.custo_total.toFixed(2)}</p>`
+  ).join("");
+
+  cmvTotalSpan.innerText = cmvTotal.toFixed(2);
+  cmvUnit.innerText = (cmvTotal / rendimentoFinal.value).toFixed(2);
+
+  const preco = produtoSelecionado?.preco_venda || 0;
+  margem.innerText = preco
+    ? (((preco - (cmvTotal / rendimentoFinal.value)) / preco) * 100).toFixed(1)
+    : 0;
 }
 
+/* ===== SALVAR ===== */
 async function salvar(){
-  let fotoUrl=null;
-  if(foto.files[0]){
-    const path=`${Date.now()}-${foto.files[0].name}`;
-    await sb.storage.from("ficha_tecnica").upload(path,foto.files[0]);
-    fotoUrl=sb.storage.from("ficha_tecnica").getPublicUrl(path).data.publicUrl;
+  let fotoUrl = null;
+
+  if (foto.files[0]) {
+    const path = `${Date.now()}-${foto.files[0].name}`;
+    await sb.storage.from("ficha_tecnica").upload(path, foto.files[0]);
+    fotoUrl = sb.storage.from("ficha_tecnica").getPublicUrl(path).data.publicUrl;
   }
+
   await sb.from("ficha_tecnica").insert({
-    produto_nome:produto.descricao,
-    receita:ingredientes,
-    custo_total:cmv,
-    custo_unitario:cmv/rendimentoFinal.value,
-    preco_venda:preco,
-    margem,
-    foto_url:fotoUrl
+    produto_id: produtoSelecionado.id,
+    produto_nome: produtoSelecionado.nome,
+    unidade_produto: produtoSelecionado.unidade,
+    preco_venda: produtoSelecionado.preco_venda,
+    receita: ingredientes,
+    rendimento: rendimentoFinal.value,
+    custo_total: cmvTotal,
+    custo_unitario: cmvTotal / rendimentoFinal.value,
+    margem_percentual: margem.innerText,
+    foto_url: fotoUrl
   });
-  alert("Ficha salva");
+
+  alert("Ficha técnica salva com sucesso!");
 }
 </script>
 </body>
