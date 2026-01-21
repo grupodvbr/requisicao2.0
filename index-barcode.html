@@ -194,20 +194,22 @@ button.loading::after {
    CAMERA / LEITOR
 ========================================================= */
 #camera {
-  display: none;
   width: 100%;
   height: 260px;
   margin-top: 14px;
   border-radius: 18px;
   overflow: hidden;
   background: #000;
+  position: relative;
 }
 
-#camera video {
-  width: 100%;
-  height: 100%;
+#camera video,
+#camera canvas {
+  width: 100% !important;
+  height: 100% !important;
   object-fit: cover;
 }
+
 
 #codigoLido {
   margin-top: 8px;
@@ -296,12 +298,6 @@ tbody tr:nth-child(even) {
   background: #fecaca;
 }
 
-/* =========================================================
-   UTILIDADES
-========================================================= */
-.hidden {
-  display: none !important;
-}
 
 </style>
 </head>
@@ -357,7 +353,9 @@ tbody tr:nth-child(even) {
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
 <button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
 
-<div id="camera"></div>
+<div id="camera">
+  <div id="cameraViewport"></div>
+</div>
 <div id="codigoLido"></div>
 
 <label>Produto</label>
@@ -526,7 +524,8 @@ if (j?.produto) {
 
 /* ===== CAMERA (CORRIGIDA) ===== */
 btnOpenCamera.onclick = () => {
-  camera.style.display = "block";
+  camera.classList.remove("hidden");
+
   btnOpenCamera.classList.add("hidden");
   btnCloseCamera.classList.remove("hidden");
   codigoLido.textContent = "Abrindo câmera...";
@@ -534,7 +533,7 @@ btnOpenCamera.onclick = () => {
   Quagga.init({
     inputStream: {
       type: "LiveStream",
-      target: camera,
+target: document.getElementById("cameraViewport"),
       constraints: {
         facingMode: "environment",
         width: { ideal: 1280 },
