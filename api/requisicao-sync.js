@@ -1,123 +1,93 @@
-export const config = {
-  runtime: "edge"
-};
-
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método não permitido" });
-  }
-
   try {
-    if (!req.body) {
-      return res.status(400).json({ error: "Body vazio" });
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
     }
 
-    const { requisicao, novoStatus, vf_token } = req.body;
+    const { token, requisicao, novoStatus } = req.body;
 
-    if (!requisicao || !novoStatus || !vf_token) {
-      return res.status(400).json({
-        error: "requisicao, novoStatus e vf_token são obrigatórios"
-      });
+    if (!token) {
+      return res.status(401).json({ error: "Token VF não informado" });
     }
 
-
-    if (novoStatus === "ENTREGUE" && !requisicao.produto_id_vf) {
-      return res.status(400).json({
-        error: "produto_id_vf não informado"
-      });
-    }
-
-    // 🟢 CRIAR NO VAREJO FÁCIL
-    if (novoStatus === "ENTREGUE" && !requisicao.vf_requisicao_id) {
-
-      const custo = Number(requisicao.custo) || 0.01;
-
-      const payloadVF = {
-        id: 0,
-        dataTransferencia: new Date().toISOString(),
-        dataRecebimento: new Date().toISOString(),
-        tipo: "TRANSFERENCIA",
-        status: "RECEBIDA",
-        modelo: "DIRETA",
-        lojaId: requisicao.loja_id,
-        localOrigemId: requisicao.local_origem_id,
-        localDestinoId: requisicao.local_destino_id,
-        setorId: requisicao.setor_id,
-        solicitanteId: requisicao.solicitante_id,
-        motivoRequisicaoId: requisicao.motivo_requisicao_id,
-        observacaoGeral: requisicao.observacao_geral || "REGISTRO VIA API",
-        total: 0,
-        itens: [
-          {
-            id: 0,
-            produtoId: requisicao.produto_id_vf,
-            quantidadeTransferida: requisicao.quantidade,
-            observacao: requisicao.observacoes || "",
-            custoMedio: custo,
-            custo: custo,
-            custoReposicao: custo,
-            custoFiscal: custo
-          }
-        ]
-      };
-
-      const vfResp = await fetch(
-        "https://villachopp.varejofacil.com/api/v1/estoque/requisicoes-mercadorias",
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `${vf_token}`,
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(payloadVF)
-        }
-      );
-
-      const vfText = await vfResp.text();
-
-      if (!vfResp.ok) {
-        return res.status(vfResp.status).json({
-          error: "Erro Varejo Fácil",
-          raw: vfText
-        });
-      }
-
-      const vfJson = JSON.parse(vfText);
-
+    // 🔒 Só sincroniza com VF quando for ENTREGUE
+    if (novoStatus !== "ENTREGUE") {
       return res.status(200).json({
-        acao: "CRIADA",
-        vf_requisicao_id: vfJson.id
+        acao: "status_local",
+        message: "Status não exige sincronização com VF"
       });
     }
 
-    // 🔴 ESTORNO
-    if (
-      requisicao.status === "ENTREGUE" &&
-      novoStatus !== "ENTREGUE" &&
-      requisicao.vf_requisicao_id
-    ) {
-      await fetch(
-        `https://villachopp.varejofacil.com/api/v1/estoque/requisicoes-mercadorias/${requisicao.vf_requisicao_id}`,
+    // 🧠 PAYLOAD EXATAMENTE NO PADRÃO DO SWAGGER
+    const payload = {
+      id: 0,
+      dataTransferencia: new Date().toISOString().substring(0, 10),
+      dataRecebimento: new Date().toISOString().substring(0, 10),
+      tipo: "TRANSFERENCIA",
+      status: "RECEBIDA",
+      modelo: "DIRETA",
+      lojaId: 1,
+      localOrigemId: 1,
+      localDestinoId: 1,
+      setorId: requisicao.setor_id || 1,
+      solicitanteId: requisicao.usuario_id || 1,
+      motivoRequisicaoId: 1,
+      observacaoGeral: requisicao.observacoes || "",
+      total: 0,
+      itens: [
         {
-          method: "DELETE",
-          headers: {
-            "Authorization": `${vf_token}`,
-            "Accept": "application/json"
-          }
+          id: 0,
+          quantidadeTransferida: Number(requisicao.quantidade),
+          observacao: requisicao.observacoes || "",
+          produtoId: requisicao.produto_id_vf,
+          custoMedio: 0,
+          custo: 0,
+          custoReposicao: 0,
+          custoFiscal: 0
         }
-      );
+      ]
+    };
 
-      return res.status(200).json({ acao: "ESTORNADA" });
+    console.log("VF PAYLOAD:", JSON.stringify(payload, null, 2));
+
+    const response = await fetch(
+      "https://villachopp.varejofacil.com/api/v1/estoque/requisicoes-mercadorias",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `${token}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const raw = await response.text();
+
+    console.log("VF STATUS:", response.status);
+    console.log("VF RAW:", raw);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: "Erro ao criar requisição no Varejo Fácil",
+        raw,
+        payload
+      });
     }
 
-    return res.status(200).json({ acao: "NENHUMA" });
+    const json = JSON.parse(raw);
+
+    return res.status(200).json({
+      acao: "entregue",
+      vf_requisicao_id: json.id,
+      vf_payload: json
+    });
 
   } catch (err) {
-    console.error("ERRO requisicao-sync:", err);
+    console.error("REQUISICAO SYNC ERROR:", err);
     return res.status(500).json({
-      error: "Erro interno",
+      error: "Erro interno requisição-sync",
       message: err.message
     });
   }
