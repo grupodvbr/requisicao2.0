@@ -8,7 +8,6 @@ content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
-
 <style>
 :root{
   --azul:#2563eb;
@@ -230,6 +229,54 @@ const sb=supabase.createClient(
 
 let dados=[],registroAtual=null;
 
+
+
+
+
+
+
+
+
+
+
+let vfToken = null;
+
+async function autenticarVF() {
+  const tokenSalvo = sessionStorage.getItem("vf_token");
+  if (tokenSalvo) {
+    vfToken = tokenSalvo;
+    return tokenSalvo;
+  }
+
+  const resp = await fetch("/api/auth", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+  });
+
+  const raw = await resp.text();
+
+  if (!resp.ok) {
+    console.error("Erro auth VF:", raw);
+    throw new Error("Falha na autenticação VF");
+  }
+
+  const json = JSON.parse(raw);
+
+  if (!json.accessToken) {
+    throw new Error("AccessToken VF não retornado");
+  }
+
+  vfToken = json.accessToken;
+  sessionStorage.setItem("vf_token", json.accessToken);
+
+  return json.accessToken;
+}
+
+
+
+
+
+  
 /* LOAD */
 async function carregar(){
  const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
@@ -238,7 +285,10 @@ async function carregar(){
  filtrar();
  calcularResumo();
 }
-carregar();
+(async () => {
+  await autenticarVF(); // 🔐 AUTH PRIMEIRO
+  await carregar();     // 📊 depois carrega dados
+})();
 
 /* FILTROS */
 function preencherFiltros(){
@@ -295,7 +345,6 @@ function render(lista){
 
 async function mudarStatus(id, novoStatus) {
 
-  // 🔥 BUSCA A REQUISIÇÃO COMPLETA NO SUPABASE
   const { data: requisicao, error } = await sb
     .from("requisicoes")
     .select("*")
@@ -309,14 +358,14 @@ async function mudarStatus(id, novoStatus) {
 
   const resp = await fetch("/api/requisicao-sync", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      requisicao,
-      novoStatus,
-      vf_token: localStorage.getItem("vf_token")
-    })
+    headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+  token: vfToken,        // 👈 AQUI
+  requisicao,
+  novoStatus
+})
+
+
   });
 
   const text = await resp.text();
@@ -329,9 +378,6 @@ async function mudarStatus(id, novoStatus) {
 
   const json = JSON.parse(text);
 
-  console.log("SYNC OK:", json);
-
-  // 🔥 ATUALIZA STATUS LOCAL
   await sb
     .from("requisicoes")
     .update({
@@ -341,20 +387,22 @@ async function mudarStatus(id, novoStatus) {
       vf_enviado_em: new Date().toISOString()
     })
     .eq("id", id);
-}
 
-
-const rLocal = dados.find(d => d.id === id);
-if (rLocal) {
-  rLocal.status = novoStatus;
-  if (update.vf_requisicao_id) {
-    rLocal.vf_requisicao_id = update.vf_requisicao_id;
+  // ✅ ATUALIZA LOCAL
+  const rLocal = dados.find(d => d.id === id);
+  if (rLocal) {
+    rLocal.status = novoStatus;
+    if (json.vf_requisicao_id) {
+      rLocal.vf_requisicao_id = json.vf_requisicao_id;
+    }
   }
-}
 
-
+  filtrar();
   calcularResumo();
 }
+
+
+
 
 
 /* RESUMO */
