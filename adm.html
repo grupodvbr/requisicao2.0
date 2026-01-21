@@ -10,7 +10,6 @@ content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no
 <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
-/* ===== VARIÁVEIS ===== */
 :root{
   --azul:#2563eb;
   --pendente:#f3f4f6;
@@ -31,7 +30,7 @@ body{
   color:var(--ink);
 }
 
-/* ===== HEADER ===== */
+/* HEADER */
 header{
   position:sticky;top:0;z-index:30;
   background:#fff;
@@ -43,7 +42,7 @@ header{
 }
 header h1{margin:0;font-size:1.1em;font-weight:800}
 
-/* ===== RESUMO ===== */
+/* RESUMO */
 .resumo{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
@@ -58,7 +57,6 @@ header h1{margin:0;font-size:1.1em;font-weight:800}
   display:flex;
   justify-content:space-between;
   align-items:center;
-  cursor:pointer;
 }
 .card span{
   background:#fff;
@@ -72,7 +70,7 @@ header h1{margin:0;font-size:1.1em;font-weight:800}
 .card.entregue{background:var(--entregue)}
 .card.semestoque{background:var(--semestoque)}
 
-/* ===== FILTROS ===== */
+/* FILTROS */
 .filtros{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
@@ -90,7 +88,7 @@ header h1{margin:0;font-size:1.1em;font-weight:800}
   font-size:13px;
 }
 
-/* ===== TABELA ===== */
+/* TABELA */
 table{
   width:100%;
   border-collapse:collapse;
@@ -109,15 +107,13 @@ th,td{
   text-align:center;
 }
 td.produto,td.qtd{
-  user-select:none;
   cursor:pointer;
+  user-select:none;
 }
 td.obs{font-size:12px;color:var(--muted)}
-select.status{
-  padding:4px;border-radius:6px;
-}
+select.status{padding:4px;border-radius:6px}
 
-/* ===== POPUPS ===== */
+/* POPUPS */
 .overlay{
   display:none;
   position:fixed;
@@ -133,8 +129,6 @@ select.status{
   max-width:520px;
   border-radius:16px;
   padding:16px;
-  max-height:80vh;
-  overflow:auto;
 }
 .popup button{
   width:100%;
@@ -198,85 +192,139 @@ const sb = supabase.createClient(
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-let dados = [];
-let vfToken = null;
+let dados=[],registroAtual=null,vfToken=null;
 
-/* ===== AUTH VF ===== */
+/* AUTH VF */
 async function autenticarVF(){
-  const t = sessionStorage.getItem("vf_token");
-  if(t){ vfToken = t; return; }
-
-  const r = await fetch("/api/auth",{method:"POST"});
-  const j = await r.json();
-  vfToken = j.accessToken;
+  const t=sessionStorage.getItem("vf_token");
+  if(t){vfToken=t;return;}
+  const r=await fetch("/api/auth",{method:"POST"});
+  const j=await r.json();
+  vfToken=j.accessToken;
   sessionStorage.setItem("vf_token",vfToken);
 }
 
-/* ===== LOAD ===== */
+/* LOAD */
 async function carregar(){
-  const {data} = await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
-  dados = data || [];
+  const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
+  dados=data||[];
   preencherFiltros();
   filtrar();
   calcularResumo();
 }
+(async()=>{await autenticarVF();await carregar();})();
 
-(async()=>{
-  await autenticarVF();
-  await carregar();
-})();
+/* FILTROS */
+function preencherFiltros(){
+  fSetor.innerHTML='<option value="">Todos Setores</option>';
+  [...new Set(dados.map(d=>d.setor).filter(Boolean))]
+    .forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
+  fUsuario.innerHTML='<option value="">Todos</option>';
+  [...new Set(dados.map(d=>d.usuario).filter(Boolean))]
+    .forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
+}
+[dataInicio,dataFim,fItem,fStatus,fSetor,fUsuario]
+  .forEach(e=>e.oninput=()=>{filtrar();calcularResumo();});
 
-/* ===== STATUS COM CONTROLE ===== */
-async function mudarStatus(id, novoStatus){
-  const select = event.target;
+/* FILTRAR */
+function filtrar(){
+  let l=[...dados];
+  if(fStatus.value!=="TODOS"){
+    l=l.filter(r=>{
+      const s=r.status||"PENDENTE";
+      return fStatus.value==="PENDENTE"
+        ? !["NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"].includes(s)
+        : s===fStatus.value;
+    });
+  }
+  if(fSetor.value) l=l.filter(r=>r.setor===fSetor.value);
+  if(fUsuario.value) l=l.filter(r=>r.usuario===fUsuario.value);
+  if(fItem.value){
+    const t=fItem.value.toLowerCase();
+    l=l.filter(r=>r.produto.toLowerCase().includes(t)||(r.observacoes||"").toLowerCase().includes(t));
+  }
+  render(l);
+}
 
-  const {data: req} = await sb
-    .from("requisicoes")
-    .select("*")
-    .eq("id",id)
-    .single();
+/* RENDER */
+function render(lista){
+  tabela.innerHTML="";
+  lista.forEach(r=>{
+    tabela.insertAdjacentHTML("beforeend",`
+    <tr>
+      <td>${new Date(r.created_at).toLocaleString()}</td>
+      <td class="produto" ondblclick="abrirPopupProduto('${r.id}')">${r.produto}</td>
+      <td class="qtd" ondblclick="editarQuantidade('${r.id}')">${r.quantidade}</td>
+      <td>${r.unidade}</td>
+      <td>${r.setor}</td>
+      <td>${r.usuario}</td>
+      <td class="obs">${r.observacoes||""}</td>
+      <td>
+        <select class="status" onchange="mudarStatus('${r.id}',this.value,event)">
+          ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
+            .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+      </td>
+    </tr>
+    `);
+  });
+}
 
-  const statusAnterior = req.status || "PENDENTE";
+/* STATUS – REGRA CRÍTICA */
+async function mudarStatus(id,novoStatus,e){
+  const select=e.target;
+  const {data:req}=await sb.from("requisicoes").select("*").eq("id",id).single();
+  const anterior=req.status||"PENDENTE";
 
   try{
-    const resp = await fetch("/api/requisicao-sync",{
+    const r=await fetch("/api/requisicao-sync",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        token:vfToken,
-        requisicao:req,
-        novoStatus
-      })
+      body:JSON.stringify({token:vfToken,requisicao:req,novoStatus})
     });
+    if(!r.ok) throw new Error();
 
-    if(!resp.ok){
-      throw new Error("API VF falhou");
-    }
-
-    const json = await resp.json();
-
-    // 🔒 REGRA CRÍTICA
-    if(novoStatus === "ENTREGUE" && !json.vf_requisicao_id){
-      throw new Error("Entrega não confirmada no VF");
-    }
+    const j=await r.json();
+    if(novoStatus==="ENTREGUE" && !j.vf_requisicao_id) throw new Error();
 
     await sb.from("requisicoes").update({
       status:novoStatus,
-      vf_requisicao_id: json.vf_requisicao_id ?? req.vf_requisicao_id,
-      vf_status: json.acao,
-      vf_enviado_em: new Date().toISOString()
+      vf_requisicao_id:j.vf_requisicao_id ?? req.vf_requisicao_id,
+      vf_status:j.acao,
+      vf_enviado_em:new Date().toISOString()
     }).eq("id",id);
 
-    const local = dados.find(d=>d.id===id);
-    local.status = novoStatus;
+    const local=dados.find(d=>d.id===id);
+    local.status=novoStatus;
 
-    filtrar();
-    calcularResumo();
+    filtrar();calcularResumo();
 
-  }catch(e){
-    alert("❌ Status NÃO alterado.\nErro ao registrar no Varejo Fácil.");
-    select.value = statusAnterior; // rollback visual
+  }catch{
+    alert("❌ NÃO ENTREGUE\nFalha ao registrar no Varejo Fácil");
+    select.value=anterior;
   }
+}
+
+/* RESUMO */
+function calcularResumo(){
+  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
+  dados.forEach(r=>{c[r.status||"PENDENTE"]++;});
+  cP.textContent=c.PENDENTE;
+  cC.textContent=c["NO CARRINHO"];
+  cCO.textContent=c.COMPRADO;
+  cN.textContent=c.NEGADO;
+  cE.textContent=c.ENTREGUE;
+  cSE.textContent=c["SEM ESTOQUE"];
+}
+
+/* PRODUTO / QTD */
+function abrirPopupProduto(id){registroAtual=dados.find(r=>r.id===id);}
+function editarQuantidade(id){
+  const r=dados.find(x=>x.id===id);
+  const v=prompt("Nova quantidade",r.quantidade);
+  if(v==null||isNaN(v))return;
+  sb.from("requisicoes").update({quantidade:v}).eq("id",id);
+  r.quantidade=v;filtrar();
 }
 </script>
 
