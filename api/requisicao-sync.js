@@ -10,25 +10,23 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Token VF não informado" });
     }
 
-    // 🔒 Só sincroniza com VF quando for ENTREGUE
+    // 🔒 Só sincroniza no VF quando ENTREGUE
     if (novoStatus !== "ENTREGUE") {
       return res.status(200).json({
         acao: "status_local",
-        message: "Status não exige sincronização com VF"
+        message: "Status não exige sincronização"
       });
     }
 
-    // 🧠 PAYLOAD EXATAMENTE NO PADRÃO DO SWAGGER
+    // 🧠 PAYLOAD CORRETO PARA ENTREGA / RECEBIMENTO
     const payload = {
       id: 0,
-      dataTransferencia: new Date().toISOString().substring(0, 10),
+      dataReferencia: new Date().toISOString().substring(0, 10),
       dataRecebimento: new Date().toISOString().substring(0, 10),
-      tipo: "TRANSFERENCIA",
+      tipo: "REQUISICAO",        // ✅ CORRIGIDO
       status: "RECEBIDA",
       modelo: "DIRETA",
       lojaId: 1,
-      localOrigemId: 1,
-      localDestinoId: 1,
       setorId: requisicao.setor_id || 1,
       solicitanteId: requisicao.usuario_id || 1,
       motivoRequisicaoId: 1,
@@ -48,14 +46,14 @@ export default async function handler(req, res) {
       ]
     };
 
-    console.log("VF PAYLOAD:", JSON.stringify(payload, null, 2));
+    console.log("VF PAYLOAD FINAL:", JSON.stringify(payload, null, 2));
 
     const response = await fetch(
       "https://villachopp.varejofacil.com/api/v1/estoque/requisicoes-mercadorias",
       {
         method: "POST",
         headers: {
-          "Authorization": `${token}`,
+          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
