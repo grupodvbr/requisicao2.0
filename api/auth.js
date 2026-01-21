@@ -1,6 +1,5 @@
 export default async function handler(req, res) {
   try {
-    // XML EXATAMENTE IGUAL AO POSTMAN
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Usuario>
   <username>NALBERT SOUZA</username>
@@ -21,13 +20,12 @@ export default async function handler(req, res) {
 
     const raw = await response.text();
 
-    // DEBUG TOTAL
     console.log("AUTH STATUS:", response.status);
     console.log("AUTH RAW:", raw);
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: "Erro ao autenticar",
+        error: "Erro ao autenticar no Varejo Fácil",
         raw
       });
     }
@@ -37,10 +35,11 @@ export default async function handler(req, res) {
     return res.status(200).json({
       accessToken: json.accessToken,
       refreshToken: json.refreshToken,
-      expiresIn: 1800
+      expiresIn: json.expiresIn || 1800
     });
 
   } catch (err) {
+    console.error("AUTH ERROR:", err);
     return res.status(500).json({
       error: "Erro interno auth",
       message: err.message
