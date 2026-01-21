@@ -30,7 +30,7 @@ body{
   color:var(--ink);
 }
 
-/* HEADER */
+/* ===== HEADER ===== */
 header{
   position:sticky;top:0;z-index:30;
   background:#fff;
@@ -41,8 +41,11 @@ header{
   border-bottom:1px solid #e5e7eb;
 }
 header h1{margin:0;font-size:1.1em;font-weight:800}
+header button{
+  border:none;background:none;font-size:18px;cursor:pointer;
+}
 
-/* RESUMO */
+/* ===== RESUMO ===== */
 .resumo{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
@@ -57,6 +60,7 @@ header h1{margin:0;font-size:1.1em;font-weight:800}
   display:flex;
   justify-content:space-between;
   align-items:center;
+  cursor:pointer;
 }
 .card span{
   background:#fff;
@@ -70,7 +74,7 @@ header h1{margin:0;font-size:1.1em;font-weight:800}
 .card.entregue{background:var(--entregue)}
 .card.semestoque{background:var(--semestoque)}
 
-/* FILTROS */
+/* ===== FILTROS ===== */
 .filtros{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
@@ -88,7 +92,7 @@ header h1{margin:0;font-size:1.1em;font-weight:800}
   font-size:13px;
 }
 
-/* TABELA */
+/* ===== TABELA ===== */
 table{
   width:100%;
   border-collapse:collapse;
@@ -107,13 +111,15 @@ th,td{
   text-align:center;
 }
 td.produto,td.qtd{
-  cursor:pointer;
   user-select:none;
+  cursor:pointer;
 }
 td.obs{font-size:12px;color:var(--muted)}
-select.status{padding:4px;border-radius:6px}
+select.status{
+  padding:4px;border-radius:6px;
+}
 
-/* POPUPS */
+/* ===== POPUPS ===== */
 .overlay{
   display:none;
   position:fixed;
@@ -129,7 +135,10 @@ select.status{padding:4px;border-radius:6px}
   max-width:520px;
   border-radius:16px;
   padding:16px;
+  max-height:80vh;
+  overflow:auto;
 }
+.popup h3{margin-top:0}
 .popup button{
   width:100%;
   margin-top:10px;
@@ -140,7 +149,8 @@ select.status{padding:4px;border-radius:6px}
 }
 .btn-primary{background:var(--azul);color:#fff}
 .btn-danger{background:#dc2626;color:#fff}
-#camera{width:100%;height:260px;background:#000;border-radius:12px;margin-top:10px}
+#camera{width:100%;height:260px;background:#000;border-radius:12px;overflow:hidden;margin-top:10px}
+#camera video{width:100%;height:100%;object-fit:cover}
 </style>
 </head>
 
@@ -148,23 +158,26 @@ select.status{padding:4px;border-radius:6px}
 
 <header>
   <h1>📋 Requisições</h1>
+  <button onclick="toggleTema()">🌙</button>
 </header>
 
+<!-- RESUMO -->
 <div class="resumo">
-  <div class="card pendente">PENDENTE <span id="cP">0</span></div>
-  <div class="card carrinho">CARRINHO <span id="cC">0</span></div>
-  <div class="card comprado">COMPRADO <span id="cCO">0</span></div>
-  <div class="card negado">NEGADO <span id="cN">0</span></div>
-  <div class="card entregue">ENTREGUE <span id="cE">0</span></div>
-  <div class="card semestoque">SEM ESTOQUE <span id="cSE">0</span></div>
+  <div class="card pendente" onclick="abrirPopupStatus('PENDENTE')">PENDENTE <span id="cP">0</span></div>
+  <div class="card carrinho" onclick="abrirPopupStatus('NO CARRINHO')">CARRINHO <span id="cC">0</span></div>
+  <div class="card comprado" onclick="abrirPopupStatus('COMPRADO')">COMPRADO <span id="cCO">0</span></div>
+  <div class="card negado" onclick="abrirPopupStatus('NEGADO')">NEGADO <span id="cN">0</span></div>
+  <div class="card entregue" onclick="abrirPopupStatus('ENTREGUE')">ENTREGUE <span id="cE">0</span></div>
+  <div class="card semestoque" onclick="abrirPopupStatus('SEM ESTOQUE')">SEM ESTOQUE <span id="cSE">0</span></div>
 </div>
 
+<!-- FILTROS -->
 <div class="filtros">
   <input type="date" id="dataInicio">
   <input type="date" id="dataFim">
   <input type="text" id="fItem" placeholder="Item / Obs">
   <select id="fStatus">
-    <option value="PENDENTE">PENDENTE</option>
+    <option value="PENDENTE" selected>PENDENTE</option>
     <option value="TODOS">TODOS</option>
     <option>NO CARRINHO</option>
     <option>COMPRADO</option>
@@ -186,146 +199,256 @@ select.status{padding:4px;border-radius:6px}
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- POPUP STATUS -->
+<div class="overlay" id="popupStatus">
+  <div class="popup">
+    <h3 id="tituloStatus"></h3>
+    <table style="width:100%">
+      <tbody id="listaStatus"></tbody>
+    </table>
+    <button class="btn-danger" onclick="fecharPopupStatus()">Fechar</button>
+  </div>
+</div>
+
+<!-- POPUP PRODUTO -->
+<div class="overlay" id="popupProduto">
+  <div class="popup">
+    <h3>Alterar produto</h3>
+    <input id="novoCodigo" placeholder="Código de barras">
+    <button class="btn-primary" onclick="buscarProdutoManual()">Buscar</button>
+    <button class="btn-primary" onclick="abrirCamera()">Abrir câmera</button>
+    <div id="camera"></div>
+    <button class="btn-danger" onclick="fecharPopupProduto()">Cancelar</button>
+  </div>
+</div>
+
 <script>
-const sb = supabase.createClient(
+const sb=supabase.createClient(
  "https://mybsriouiwqsdufujbsc.supabase.co",
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-let dados=[],registroAtual=null,vfToken=null;
-
-/* AUTH VF */
-async function autenticarVF(){
-  const t=sessionStorage.getItem("vf_token");
-  if(t){vfToken=t;return;}
-  const r=await fetch("/api/auth",{method:"POST"});
-  const j=await r.json();
-  vfToken=j.accessToken;
-  sessionStorage.setItem("vf_token",vfToken);
-}
+let dados=[],registroAtual=null;
 
 /* LOAD */
 async function carregar(){
-  const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
-  dados=data||[];
-  preencherFiltros();
-  filtrar();
-  calcularResumo();
+ const {data}=await sb.from("requisicoes").select("*").order("created_at",{ascending:false});
+ dados=data||[];
+ preencherFiltros();
+ filtrar();
+ calcularResumo();
 }
-(async()=>{await autenticarVF();await carregar();})();
+carregar();
 
 /* FILTROS */
 function preencherFiltros(){
-  fSetor.innerHTML='<option value="">Todos Setores</option>';
-  [...new Set(dados.map(d=>d.setor).filter(Boolean))]
-    .forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
-  fUsuario.innerHTML='<option value="">Todos</option>';
-  [...new Set(dados.map(d=>d.usuario).filter(Boolean))]
-    .forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
+ fSetor.innerHTML='<option value="">Todos Setores</option>';
+ [...new Set(dados.map(d=>d.setor).filter(Boolean))].forEach(s=>fSetor.innerHTML+=`<option>${s}</option>`);
+ fUsuario.innerHTML='<option value="">Todos</option>';
+ [...new Set(dados.map(d=>d.usuario).filter(Boolean))].forEach(u=>fUsuario.innerHTML+=`<option>${u}</option>`);
 }
-[dataInicio,dataFim,fItem,fStatus,fSetor,fUsuario]
-  .forEach(e=>e.oninput=()=>{filtrar();calcularResumo();});
+[dataInicio,dataFim,fItem,fStatus,fSetor,fUsuario].forEach(e=>e.oninput=()=>{filtrar();calcularResumo();});
 
 /* FILTRAR */
 function filtrar(){
-  let l=[...dados];
-  if(fStatus.value!=="TODOS"){
-    l=l.filter(r=>{
-      const s=r.status||"PENDENTE";
-      return fStatus.value==="PENDENTE"
-        ? !["NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"].includes(s)
-        : s===fStatus.value;
-    });
-  }
-  if(fSetor.value) l=l.filter(r=>r.setor===fSetor.value);
-  if(fUsuario.value) l=l.filter(r=>r.usuario===fUsuario.value);
-  if(fItem.value){
-    const t=fItem.value.toLowerCase();
-    l=l.filter(r=>r.produto.toLowerCase().includes(t)||(r.observacoes||"").toLowerCase().includes(t));
-  }
-  render(l);
+ let lista=[...dados];
+ if(fStatus.value!=="TODOS"){
+  lista=lista.filter(r=>{
+   const s=(r.status||"PENDENTE");
+   return fStatus.value==="PENDENTE"
+    ? !["NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"].includes(s)
+    : s===fStatus.value;
+  });
+ }
+ if(fSetor.value) lista=lista.filter(r=>r.setor===fSetor.value);
+ if(fUsuario.value) lista=lista.filter(r=>r.usuario===fUsuario.value);
+ if(fItem.value){
+  const t=fItem.value.toLowerCase();
+  lista=lista.filter(r=>r.produto.toLowerCase().includes(t)||(r.observacoes||"").toLowerCase().includes(t));
+ }
+ render(lista);
 }
 
 /* RENDER */
 function render(lista){
-  tabela.innerHTML="";
-  lista.forEach(r=>{
-    tabela.insertAdjacentHTML("beforeend",`
-    <tr>
-      <td>${new Date(r.created_at).toLocaleString()}</td>
-      <td class="produto" ondblclick="abrirPopupProduto('${r.id}')">${r.produto}</td>
-      <td class="qtd" ondblclick="editarQuantidade('${r.id}')">${r.quantidade}</td>
-      <td>${r.unidade}</td>
-      <td>${r.setor}</td>
-      <td>${r.usuario}</td>
-      <td class="obs">${r.observacoes||""}</td>
-      <td>
-        <select class="status" onchange="mudarStatus('${r.id}',this.value,event)">
-          ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
-            .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
-        </select>
-      </td>
-    </tr>
-    `);
-  });
+ tabela.innerHTML="";
+ lista.forEach(r=>{
+  tabela.insertAdjacentHTML("beforeend",`
+  <tr>
+   <td>${new Date(r.created_at).toLocaleString()}</td>
+   <td class="produto" ondblclick="abrirPopupProduto('${r.id}')">${r.produto}</td>
+   <td class="qtd" ondblclick="editarQuantidade('${r.id}')">${r.quantidade}</td>
+   <td>${r.unidade}</td>
+   <td>${r.setor}</td>
+   <td>${r.usuario}</td>
+   <td class="obs">${r.observacoes||""}</td>
+   <td>
+    <select class="status" onchange="mudarStatus('${r.id}',this.value)">
+     ${["PENDENTE","NO CARRINHO","COMPRADO","NEGADO","ENTREGUE","SEM ESTOQUE"]
+       .map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+    </select>
+   </td>
+  </tr>
+  `);
+ });
 }
 
-/* STATUS – REGRA CRÍTICA */
-async function mudarStatus(id,novoStatus,e){
-  const select=e.target;
-  const {data:req}=await sb.from("requisicoes").select("*").eq("id",id).single();
-  const anterior=req.status||"PENDENTE";
+async function mudarStatus(id, novoStatus) {
 
-  try{
-    const r=await fetch("/api/requisicao-sync",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({token:vfToken,requisicao:req,novoStatus})
-    });
-    if(!r.ok) throw new Error();
+  // 🔥 BUSCA A REQUISIÇÃO COMPLETA NO SUPABASE
+  const { data: requisicao, error } = await sb
+    .from("requisicoes")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-    const j=await r.json();
-    if(novoStatus==="ENTREGUE" && !j.vf_requisicao_id) throw new Error();
+  if (error || !requisicao) {
+    alert("Erro ao carregar requisição");
+    return;
+  }
 
-    await sb.from("requisicoes").update({
-      status:novoStatus,
-      vf_requisicao_id:j.vf_requisicao_id ?? req.vf_requisicao_id,
-      vf_status:j.acao,
-      vf_enviado_em:new Date().toISOString()
-    }).eq("id",id);
+  const resp = await fetch("/api/requisicao-sync", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      requisicao,
+      novoStatus,
+      vf_token: localStorage.getItem("vf_token")
+    })
+  });
 
-    const local=dados.find(d=>d.id===id);
-    local.status=novoStatus;
+  const text = await resp.text();
 
-    filtrar();calcularResumo();
+  if (!resp.ok) {
+    console.error("Erro API:", text);
+    alert("Erro ao sincronizar com o Varejo Fácil");
+    return;
+  }
 
-  }catch{
-    alert("❌ NÃO ENTREGUE\nFalha ao registrar no Varejo Fácil");
-    select.value=anterior;
+  const json = JSON.parse(text);
+
+  console.log("SYNC OK:", json);
+
+  // 🔥 ATUALIZA STATUS LOCAL
+  await sb
+    .from("requisicoes")
+    .update({
+      status: novoStatus,
+      vf_requisicao_id: json.vf_requisicao_id ?? requisicao.vf_requisicao_id,
+      vf_status: json.acao,
+      vf_enviado_em: new Date().toISOString()
+    })
+    .eq("id", id);
+}
+
+
+const rLocal = dados.find(d => d.id === id);
+if (rLocal) {
+  rLocal.status = novoStatus;
+  if (update.vf_requisicao_id) {
+    rLocal.vf_requisicao_id = update.vf_requisicao_id;
   }
 }
 
-/* RESUMO */
-function calcularResumo(){
-  const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
-  dados.forEach(r=>{c[r.status||"PENDENTE"]++;});
-  cP.textContent=c.PENDENTE;
-  cC.textContent=c["NO CARRINHO"];
-  cCO.textContent=c.COMPRADO;
-  cN.textContent=c.NEGADO;
-  cE.textContent=c.ENTREGUE;
-  cSE.textContent=c["SEM ESTOQUE"];
+
+  calcularResumo();
 }
 
-/* PRODUTO / QTD */
-function abrirPopupProduto(id){registroAtual=dados.find(r=>r.id===id);}
-function editarQuantidade(id){
-  const r=dados.find(x=>x.id===id);
-  const v=prompt("Nova quantidade",r.quantidade);
-  if(v==null||isNaN(v))return;
-  sb.from("requisicoes").update({quantidade:v}).eq("id",id);
-  r.quantidade=v;filtrar();
+
+/* RESUMO */
+function calcularResumo(){
+ let ini=dataInicio.value?new Date(dataInicio.value):new Date(Date.now()-30*86400000);
+ let fim=dataFim.value?new Date(dataFim.value+"T23:59:59"):new Date();
+ const c={PENDENTE:0,"NO CARRINHO":0,COMPRADO:0,NEGADO:0,ENTREGUE:0,"SEM ESTOQUE":0};
+ dados.forEach(r=>{
+  const d=new Date(r.created_at);
+  if(d<ini||d>fim) return;
+  const s=(r.status||"PENDENTE");
+  if(c[s]!=null)c[s]++; else c.PENDENTE++;
+ });
+ cP.textContent=c.PENDENTE;cC.textContent=c["NO CARRINHO"];
+ cCO.textContent=c.COMPRADO;cN.textContent=c.NEGADO;
+ cE.textContent=c.ENTREGUE;cSE.textContent=c["SEM ESTOQUE"];
 }
+
+/* POPUP STATUS */
+function abrirPopupStatus(st){
+ tituloStatus.textContent=st;
+ listaStatus.innerHTML="";
+ let ini=dataInicio.value?new Date(dataInicio.value):new Date(Date.now()-30*86400000);
+ let fim=dataFim.value?new Date(dataFim.value+"T23:59:59"):new Date();
+ dados.filter(r=>{
+  const d=new Date(r.created_at);
+  return d>=ini&&d<=fim&&(r.status||"PENDENTE")===st;
+ }).forEach(r=>{
+  listaStatus.insertAdjacentHTML("beforeend",`
+   <tr><td>${r.produto}</td><td>${r.quantidade}</td><td>${r.setor}</td></tr>
+  `);
+ });
+ popupStatus.style.display="flex";
+}
+function fecharPopupStatus(){popupStatus.style.display="none";}
+
+/* PRODUTO */
+function abrirPopupProduto(id){
+ registroAtual=dados.find(r=>r.id===id);
+ popupProduto.style.display="flex";
+}
+function fecharPopupProduto(){
+ popupProduto.style.display="none";
+ Quagga.stop();
+}
+async function buscarProdutoManual(){
+buscarProduto(normalizarCodigo(novoCodigo.value));
+}
+async function buscarProduto(code){
+ const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
+ const j=await r.json();
+ if(j?.produto){
+   
+await sb.from("requisicoes").update({
+  produto: j.produto.descricao,
+  unidade: j.produto.unidadeDeVenda,
+  barcode: code,
+  produto_id_vf: j.produto.id
+}).eq("id", registroAtual.id);
+  registroAtual.produto=j.produto.descricao;
+  registroAtual.unidade=j.produto.unidadeDeVenda;
+  fecharPopupProduto();
+  filtrar();
+ }
+}
+
+/* CAMERA */
+function abrirCamera(){
+ Quagga.init({
+  inputStream:{type:"LiveStream",target:camera,constraints:{facingMode:"environment"}},
+  decoder:{readers:["ean_reader","ean_8_reader","upc_reader","code_128_reader"]}
+ },()=>Quagga.start());
+Quagga.onDetected(r=>{
+  const code = normalizarCodigo(r.codeResult.code);
+  buscarProduto(code);
+});
+}
+
+/* QTD */
+function editarQuantidade(id){
+ const r=dados.find(x=>x.id===id);
+ const decimal=["KG","G","L","ML"].includes(r.unidade);
+ const v=prompt("Nova quantidade",r.quantidade);
+ if(v==null) return;
+ const q=decimal?parseFloat(v):parseInt(v);
+ if(isNaN(q)) return;
+ sb.from("requisicoes").update({quantidade:q}).eq("id",id);
+ r.quantidade=q;
+ filtrar();
+}
+function normalizarCodigo(codigo){
+  return "0" + String(codigo).replace(/\D/g,"");
+}
+
 </script>
 
 </body>
