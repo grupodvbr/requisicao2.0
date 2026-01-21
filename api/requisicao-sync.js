@@ -23,12 +23,12 @@ export default async function handler(req, res) {
       id: 0,
       dataReferencia: new Date().toISOString().substring(0, 10),
       dataRecebimento: new Date().toISOString().substring(0, 10),
-      tipo: "REQUISICAO",        // ✅ CORRIGIDO
+      tipo: "TRANSFERENCIA",        // ✅ CORRIGIDO
       status: "RECEBIDA",
       modelo: "DIRETA",
       lojaId: 1,
       setorId: requisicao.setor_id || 1,
-      solicitanteId: requisicao.usuario_id || 1,
+      solicitanteId: requisicao.usuario_id || 118,
       motivoRequisicaoId: 1,
       observacaoGeral: requisicao.observacoes || "",
       total: 0,
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          "Authorization": `${token}`,
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
