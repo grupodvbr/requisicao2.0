@@ -312,6 +312,9 @@ tbody tr:nth-child(even) {
 .hidden {
   display: none !important;
 }
+#camera {
+  min-height: 260px;
+}
 
 </style>
 </head>
@@ -367,9 +370,8 @@ tbody tr:nth-child(even) {
 <button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
 <button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
 
-<div id="camera">
-  <video autoplay muted playsinline></video>
-</div>
+<div id="camera"></div>
+
 <div id="codigoLido"></div>
 
 <label>Produto</label>
@@ -431,7 +433,6 @@ const btnManual = document.getElementById("btnManual");
 const btnOpenCamera = document.getElementById("btnOpenCamera");
 const btnCloseCamera = document.getElementById("btnCloseCamera");
 const camera = document.getElementById("camera");
-const video = camera.querySelector("video");
 
 function aplicarModoBusca() {
   const modo = modoBuscaEl.value;
@@ -545,10 +546,11 @@ btnOpenCamera.onclick = async () => {
   // ⏳ garante que o elemento está visível
   await new Promise(r => setTimeout(r, 200));
 
-  Quagga.init({
-    inputStream: {
-      type: "LiveStream",
-      target: video, // ✅ VIDEO (OBRIGATÓRIO)
+Quagga.init({
+  inputStream: {
+    type: "LiveStream",
+    target: camera, // ✅ correto
+
       constraints: {
         facingMode: { ideal: "environment" },
         width: { ideal: 1280 },
