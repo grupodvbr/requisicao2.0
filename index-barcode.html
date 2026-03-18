@@ -404,396 +404,167 @@ tbody tr:nth-child(even) {
 </audio>
 
 </div>
+<!-- 🔥 SUBSTITUI TODO SEU SCRIPT POR ESSE -->
 
 <script>
-/* ===== SUPABASE ===== */
-const sb=supabase.createClient(
+const sb = supabase.createClient(
  "https://mybsriouiwqsdufujbsc.supabase.co",
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-const normalizar=c=>"0"+String(c).replace(/\D/g,"");
-
-/* ===== ESTADO ===== */
 let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
-let unidadeAuto = "";
-let barcodeFinal = "";
-let enviando = false;
 
-// 🔥 ADICIONAR
-let custoPadrao = 0;
-let produtoIdVF = null;
+let produtoSelecionado = null;
 
-const modoBuscaEl = document.getElementById("modoBusca");
-const buscaNomeEl = document.getElementById("buscaNome");
-const buscaIdEl = document.getElementById("buscaId");
+/* ================= LOGIN ================= */
+btnLogin.onclick = async () => {
+  const { data } = await sb.from("usuarios")
+    .select("*")
+    .eq("usuario", usuario.value)
+    .eq("senha", senha.value)
+    .eq("ativo", true)
+    .single();
 
-const barcodeInput = document.getElementById("barcode");
-const btnManual = document.getElementById("btnManual");
-const btnOpenCamera = document.getElementById("btnOpenCamera");
-const btnCloseCamera = document.getElementById("btnCloseCamera");
-const camera = document.getElementById("camera");
+  if (!data) return alert("Login inválido");
 
-function aplicarModoBusca() {
-  const modo = modoBuscaEl.value;
-
-  // Esconde tudo
-  barcodeInput.classList.add("hidden");
-  buscaNomeEl.classList.add("hidden");
-  buscaIdEl.classList.add("hidden");
-  btnManual.classList.add("hidden");
-  btnOpenCamera.classList.add("hidden");
-  btnCloseCamera.classList.add("hidden");
-  camera.classList.add("hidden");
-  codigoLido.textContent = "";
-
-  // Fecha câmera se estiver aberta
-  try { Quagga.stop(); } catch (e) {}
-
-  // === MODO CÓDIGO DE BARRAS ===
-  if (modo === "barcode") {
-    barcodeInput.classList.remove("hidden");
-    btnManual.classList.remove("hidden");
-    btnOpenCamera.classList.remove("hidden");
-  }
-
-  // === MODO ID ===
-  if (modo === "id") {
-    buscaIdEl.classList.remove("hidden");
-    btnManual.classList.remove("hidden");
-  }
-
-  // === MODO NOME ===
-  if (modo === "nome") {
-    buscaNomeEl.classList.remove("hidden");
-  }
-}
-
-// Eventos
-modoBuscaEl.addEventListener("change", aplicarModoBusca);
-
-// Aplica ao iniciar a tela
-aplicarModoBusca();
-
-
-/* ===== SETOR PERSISTENTE ===== */
-const setorEl=document.getElementById("setor");
-setorEl.value=localStorage.getItem("setor")||setorEl.value;
-setorEl.onchange=()=>localStorage.setItem("setor",setorEl.value);
-
-/* ===== LOGIN ===== */
-btnLogin.onclick=async()=>{
- const {data}=await sb.from("usuarios")
- .select("*")
- .eq("usuario",usuario.value)
- .eq("senha",senha.value)
- .eq("ativo",true)
- .single();
- if(!data) return;
- localStorage.setItem("usuario",JSON.stringify(data.usuario));
- init();
+  localStorage.setItem("usuario", JSON.stringify(data.usuario));
+  init();
 };
 
-/* ===== INIT ===== */
+/* ================= INIT ================= */
 async function init(){
   loginArea.classList.add("hidden");
   appArea.classList.remove("hidden");
   btnLogout.classList.remove("hidden");
 
-  await gerarTokenVF();   // 🔥 ISSO É O QUE FALTAVA
   carregarHistorico();
-};
+}
 if(usuarioLogado) init();
 
-/* ===== LOGOUT ===== */
-btnLogout.onclick=()=>{
- localStorage.removeItem("usuario");
- location.reload();
+/* ================= LOGOUT ================= */
+btnLogout.onclick = () => {
+  localStorage.removeItem("usuario");
+  location.reload();
 };
 
-/* ===== BUSCAR PRODUTO (SEM ERRO VISUAL) ===== */
-async function buscarProduto(code){
- barcodeFinal=code;
- codigoLido.textContent=`Lendo código: ${code}`;
- try{
-  const r=await fetch(`/api/buscar-barcode?barcode=${code}`);
-  const j=await r.json();
-if (j?.produto) {
-  produto.value = j.produto.descricao;
-  unidadeAuto = j.produto.unidadeDeVenda;
-  produtoIdVF = j.produto.id; // ✅ ID DO VAREJO FÁCIL
-   custoPadrao =
-    j.produto.custoMedio ??
-    j.produto.custo ??
-    j.produto.custoReposicao ??
-    0.01; // fallback obrigatório
-
-   
-  unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
-  beep.play();
-  fecharCamera();
-}
- }catch{}
-}
-
-/* ===== CAMERA ===== */
-btnOpenCamera.onclick = async () => {
-  camera.classList.remove("hidden");
-  btnOpenCamera.classList.add("hidden");
-  btnCloseCamera.classList.remove("hidden");
-  codigoLido.textContent = "";
-
-  // ⏳ garante que o elemento está visível
-  await new Promise(r => setTimeout(r, 200));
-
-Quagga.init({
-  inputStream: {
-    type: "LiveStream",
-    target: camera, // ✅ correto
-
-      constraints: {
-        facingMode: { ideal: "environment" },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    },
-    locator: {
-      patchSize: "medium",
-      halfSample: true
-    },
-    numOfWorkers: navigator.hardwareConcurrency || 4,
-    decoder: {
-      readers: [
-        "ean_reader",
-        "ean_8_reader",
-        "upc_reader",
-        "code_128_reader"
-      ]
-    },
-    locate: true
-  }, err => {
-    if (err) {
-      console.error("Erro ao iniciar câmera:", err);
-      alert("Erro ao acessar a câmera");
-      return;
-    }
-    Quagga.start();
-  });
-
-  Quagga.offDetected();
-  Quagga.onDetected(result => {
-    const code = result.codeResult.code;
-    buscarProduto(normalizar(code));
-  });
-};
-
-btnCloseCamera.onclick = fecharCamera;
-
-function fecharCamera() {
-  try { Quagga.stop(); } catch(e){}
-  camera.classList.add("hidden");
-  btnOpenCamera.classList.remove("hidden");
-  btnCloseCamera.classList.add("hidden");
-}
-
-btnManual.onclick = () => {
-  const modo = modoBuscaEl.value;
-
-  if (modo === "barcode" && barcode.value) {
-    buscarProduto(normalizar(barcode.value));
-  }
-
-  if (modo === "id" && buscaProdutoId.value) {
-    buscaProdutoId.dispatchEvent(new Event("change"));
-  }
-};
-
-btnEnviar.onclick = async () => {
-  if (enviando || !produto.value || !quantidade.value) return;
-
-  enviando = true;
-  btnEnviar.classList.add("loading");
-
-await sb.from("requisicoes").insert({
-  usuario: usuarioLogado,
-  setor: setorEl.value,
-
-  // PRODUTO
-  produto: produto.value,
-  produto_id_vf: produtoIdVF,
-  unidade: unidadeAuto,
-  quantidade: Number(quantidade.value),
-  barcode: barcodeFinal,
-
-  // CUSTOS (🔥 O PROBLEMA ESTAVA AQUI)
-  custo: custoPadrao,
-  custo_medio: custoPadrao,
-  custo_reposicao: custoPadrao,
-  custo_fiscal: custoPadrao,
-
-  // CONTEXTO VF
-  loja_id: 2,
-  local_origem_id: 20,
-  local_destino_id: 31,
-  setor_id: 2,
-  solicitante_id: 72,
-  motivo_requisicao_id: 1,
-
-  observacao_geral: observacoes.value,
-  observacoes: observacoes.value,
-
-  status: "PENDENTE"
-});
-
-  btnEnviar.classList.remove("loading");
-  enviando = false;
-
-  // 🔥 LIMPA PARA NOVO REGISTRO (SEM MEXER NO SETOR)
-  limparBuscaParaNovoRegistro();
-
-  carregarHistorico();
-};
-
-
-
-/* ===== HISTÓRICO ===== */
-async function carregarHistorico(){
- historico.innerHTML="";
- const seteDias=new Date(Date.now()-7*86400000).toISOString();
- const {data}=await sb.from("requisicoes")
- .select("*")
- .eq("usuario",usuarioLogado)
- .gte("created_at",seteDias)
- .order("created_at",{ascending:false});
- (data||[]).forEach(r=>{
-  const horas=(Date.now()-new Date(r.created_at))/3600000;
-  historico.insertAdjacentHTML("beforeend",`
-   <tr id="row-${r.id}">
-    <td>${r.produto}</td>
-    <td>${r.quantidade}</td>
-    <td>${r.status}</td>
-    <td>${horas<=1?`<button class="btn-delete" onclick="excluir('${r.id}')">Excluir</button>`:"-"}</td>
-   </tr>`);
- });
-}
-
-/* ===== EXCLUIR ===== */
-async function excluir(id){
- const {data}=await sb.rpc("excluir_requisicao",{p_id:id,p_usuario:usuarioLogado});
- if(data) document.getElementById("row-"+id)?.remove();
-}
+/* ================= BUSCA PRODUTO ================= */
 buscaProdutoNome.onkeyup = async () => {
-  const q = buscaProdutoNome.value.trim();
 
-  // 🔥 SE APAGOU OU MENOS DE 2 CARACTERES → LIMPA LISTA
-  if (q.length < 2) {
+  const q = buscaProdutoNome.value.trim().toUpperCase();
+
+  if(q.length < 2){
     listaProdutos.innerHTML = "";
     return;
   }
 
-  try {
-    const r = await fetch(`/api/produtos-busca?q=${encodeURIComponent(q)}`);
-    const j = await r.json();
+  const { data } = await sb
+    .from("produtos_para_requisicao")
+    .select("*")
+    .ilike("nome", `%${q}%`)
+    .limit(10);
 
-    listaProdutos.innerHTML = "";
+  listaProdutos.innerHTML = "";
 
-    (j.items || []).forEach(p => {
-      listaProdutos.insertAdjacentHTML(
-        "beforeend",
-        `<div class="item" onclick='selecionarProduto(${JSON.stringify(p)})'>
-          ${p.descricao}
-        </div>`
-      );
-    });
-
-  } catch (err) {
-    console.error("Erro busca nome:", err);
-    listaProdutos.innerHTML = "";
-  }
+  (data || []).forEach(p => {
+    listaProdutos.insertAdjacentHTML("beforeend", `
+      <div class="item" onclick="selecionarProduto(${p.id}, '${p.nome}', '${p.unidade || "UN"}')">
+        ${p.nome}
+      </div>
+    `);
+  });
 };
 
-function selecionarProduto(p){
-  produto.value = p.descricao;
-  unidadeAuto = p.unidadeDeVenda;
-  produtoIdVF = p.id; // ✅ ID VF
-   custoPadrao =
-  p.custoMedio ??
-  p.custo ??
-  p.custoReposicao ??
-  0.01;
+/* ================= SELECIONAR ================= */
+function selecionarProduto(id, nome, unidade){
+  produto.value = nome;
+  produtoSelecionado = { id, nome, unidade };
 
-  unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
+  unidadeBox.innerHTML = `<div class="badge">${unidade}</div>`;
   listaProdutos.innerHTML = "";
 }
 
-buscaProdutoId.onchange = async () => {
-  const id = buscaProdutoId.value;
-  if (!id) return;
+/* ================= ENVIAR ================= */
+btnEnviar.onclick = async () => {
 
-  // 🔐 pega token do localStorage ou de onde você já usa
-  const token = localStorage.getItem("vf_token");
+  if(!produto.value || !quantidade.value){
+    return alert("Preencha produto e quantidade");
+  }
 
-  const r = await fetch(`/api/buscar-id?id=${id}`, {
-    headers: {
-      Authorization: token
-    }
+  let produtoNome = produto.value.trim().toUpperCase();
+
+  let produtoId = produtoSelecionado?.id || null;
+  let unidade = produtoSelecionado?.unidade || "UN";
+
+  /* 🔥 SE NÃO EXISTIR → CRIA */
+  if(!produtoId){
+
+    const { data: novo } = await sb
+      .from("produtos_para_requisicao")
+      .insert({
+        nome: produtoNome,
+        unidade: unidade
+      })
+      .select()
+      .single();
+
+    produtoId = novo.id;
+  }
+
+  /* 🔥 SALVA REQUISIÇÃO */
+  await sb.from("requisicoes").insert({
+    usuario: usuarioLogado,
+    setor: setor.value,
+    produto: produtoNome,
+    produto_id: produtoId,
+    quantidade: Number(quantidade.value),
+    unidade: unidade,
+    observacoes: observacoes.value,
+    status: "PENDENTE"
   });
 
-  const j = await r.json();
+  alert("✅ Requisição enviada!");
 
-  if (j?.items?.length) {
-const p = j.items[0];
-produto.value = p.descricao;
-unidadeAuto = p.unidadeDeVenda;
-produtoIdVF = p.id; // ✅ ID VF
-custoPadrao =
-  p.custoMedio ??
-  p.custo ??
-  p.custoReposicao ??
-  0.01;
-
-unidadeBox.innerHTML = `<div class="badge">${unidadeAuto}</div>`;
-  }
+  limpar();
+  carregarHistorico();
 };
 
-async function gerarTokenVF() {
-  try {
-    const r = await fetch("/api/auth");
-    const j = await r.json();
-
-    if (!j.accessToken) {
-      console.error("Auth inválido:", j);
-      alert("Erro ao autenticar no Varejo Fácil");
-      return;
-    }
-
-    localStorage.setItem("vf_token", j.accessToken);
-    console.log("TOKEN VF GERADO");
-  } catch (err) {
-    console.error("Erro auth VF:", err);
-  }
-}
-function limparBuscaParaNovoRegistro() {
-  barcode.value = "";
-  buscaProdutoNome.value = "";
-  buscaProdutoId.value = "";
-
+/* ================= LIMPAR ================= */
+function limpar(){
   produto.value = "";
   quantidade.value = "";
   observacoes.value = "";
-
-  unidadeAuto = "";
-  produtoIdVF = null; // ✅ LIMPA ID
   unidadeBox.innerHTML = "";
   listaProdutos.innerHTML = "";
-  codigoLido.textContent = "";
-
-  // Fecha câmera se estiver aberta
-  try { Quagga.stop(); } catch(e){}
-  btnOpenCamera.classList.remove("hidden");
-  btnCloseCamera.classList.add("hidden");
+  produtoSelecionado = null;
 }
 
+/* ================= HISTÓRICO ================= */
+async function carregarHistorico(){
+
+  historico.innerHTML = "";
+
+  const seteDias = new Date(Date.now() - 7*86400000).toISOString();
+
+  const { data } = await sb
+    .from("requisicoes")
+    .select("*")
+    .eq("usuario", usuarioLogado)
+    .gte("created_at", seteDias)
+    .order("created_at", { ascending:false });
+
+  (data || []).forEach(r => {
+
+    historico.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td>${r.produto}</td>
+        <td>${r.quantidade}</td>
+        <td>${r.status}</td>
+        <td>-</td>
+      </tr>
+    `);
+
+  });
+}
 </script>
 </body>
 </html>
