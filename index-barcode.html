@@ -229,7 +229,6 @@ produto.value=nome;
 listaProdutos.innerHTML="";
 }
 
-/* ===== ENVIAR ===== */
 async function enviar(){
 
 if(!produto.value || !quantidade.value){
@@ -237,44 +236,70 @@ alert("Preencha os campos");
 return;
 }
 
-const nome=produto.value.toUpperCase();
+const nome = produto.value.trim().toUpperCase();
 
-// cria produto se não existir
-let { data: existente } = await sb
+/* ================= BUSCAR PRODUTO ================= */
+const { data: existente, error: erroBusca } = await sb
 .from("produtos_para_requisicao")
 .select("*")
 .eq("nome", nome)
-.single();
+.maybeSingle();
+
+if(erroBusca){
+console.error("Erro busca produto:", erroBusca);
+alert("Erro ao buscar produto");
+return;
+}
 
 let produto_id;
 
+/* ================= CRIAR SE NÃO EXISTIR ================= */
 if(!existente){
-const { data: novo } = await sb
+
+const { data: novo, error: erroInsert } = await sb
 .from("produtos_para_requisicao")
-.insert({ nome })
+.insert({
+  nome: nome,
+  unidade: unidade
+})
 .select()
-.single();
+.maybeSingle();
+
+if(erroInsert){
+console.error("Erro ao criar produto:", erroInsert);
+alert("Erro ao criar produto");
+return;
+}
 
 produto_id = novo.id;
+
 }else{
 produto_id = existente.id;
 }
 
-await sb.from("requisicoes").insert({
-produto:nome,
-produto_id,
-quantidade:Number(quantidade.value),
-unidade,
-setor:setor.value,
-usuario:solicitante.value,
-observacoes:obs.value,
-status:"ENVIADO"
+/* ================= INSERIR REQUISIÇÃO ================= */
+const { error: erroReq } = await sb
+.from("requisicoes")
+.insert({
+  produto: nome,
+  produto_id: produto_id,
+  quantidade: Number(quantidade.value),
+  unidade: unidade,
+  setor: setor.value,
+  usuario: solicitante.value,
+  observacoes: obs.value,
+  status: "ENVIADO"
 });
+
+if(erroReq){
+console.error("Erro requisição:", erroReq);
+alert("Erro ao enviar requisição");
+return;
+}
 
 addTabela(nome);
 limparCampos();
 }
-
 /* ===== TABELA ===== */
 function addTabela(nome){
 const hora=new Date().toLocaleTimeString();
