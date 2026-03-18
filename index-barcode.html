@@ -2,409 +2,195 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Requisição de Compras • Delícia Gourmet</title>
+<title>Requisição de produtos</title>
 
 <meta name="viewport"
-content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-
-<meta name="theme-color" content="#1e40af">
-<link rel="manifest" href="/manifest.json">
+content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
 
 <style>
-/* =========================================================
-   RESET + BASE
-========================================================= */
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:Inter;
+background:#f1f5f9;
+display:flex;
+justify-content:center;
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  touch-action: manipulation;
+.container{
+width:100%;
+max-width:500px;
+background:#fff;
+padding:20px;
+border-radius:12px;
+margin:10px;
 }
 
-body {
-  font-family: 'Inter', Arial, sans-serif;
-  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
-  display: flex;
-  justify-content: center;
-  padding: 14px;
-  color: #0f172a;
+h1{
+text-align:center;
+font-size:20px;
+margin-bottom:20px;
 }
 
-/* =========================================================
-   CONTAINER PRINCIPAL
-========================================================= */
-.container {
-  background: #ffffff;
-  border-radius: 24px;
-  box-shadow:
-    0 10px 25px rgba(0,0,0,0.08),
-    0 30px 60px rgba(0,0,0,0.08);
-  max-width: 520px;
-  width: 100%;
-  padding: 20px 18px 22px;
-  position: relative;
+label{
+font-weight:700;
+font-size:14px;
+margin-top:10px;
+display:block;
 }
 
-/* =========================================================
-   TOPO / HEADER
-========================================================= */
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+input,select,textarea{
+width:100%;
+padding:12px;
+border-radius:8px;
+border:1px solid #d1d5db;
+margin-top:5px;
+font-size:14px;
 }
 
-.topbar h1 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
+textarea{
+height:80px;
 }
 
-/* BOTÃO LOGOUT */
-.btn-logout {
-  width: auto;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 800;
-  border-radius: 999px;
-  border: none;
-  background: #fee2e2;
-  color: #991b1b;
-  cursor: pointer;
-  transition: all .2s ease;
+.unidades{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+margin-top:10px;
 }
 
-.btn-logout:hover {
-  background: #fecaca;
+.unidades button{
+flex:1;
+padding:10px;
+border-radius:20px;
+border:2px solid #3b82f6;
+background:#fff;
+font-weight:700;
+cursor:pointer;
 }
 
-/* =========================================================
-   FORMULÁRIOS
-========================================================= */
-label {
-  display: block;
-  margin-top: 14px;
-  margin-bottom: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1e293b;
+.unidades button.active{
+background:#3b82f6;
+color:#fff;
 }
 
-input,
-select,
-textarea {
-  width: 100%;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid #cbd5e1;
-  font-size: 15px;
-  font-family: inherit;
-  outline: none;
-  background: #ffffff;
-  transition: all .15s ease;
+.btn{
+width:100%;
+padding:14px;
+border:none;
+border-radius:8px;
+font-weight:800;
+margin-top:10px;
+cursor:pointer;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+.btn-primary{
+background:#2f86d6;
+color:#fff;
 }
 
-input[readonly] {
-  background: #f1f5f9;
-  color: #334155;
+.btn-danger{
+background:#ef4444;
+color:#fff;
 }
 
-textarea {
-  min-height: 90px;
-  resize: none;
+table{
+width:100%;
+margin-top:15px;
+border-collapse:collapse;
+font-size:12px;
 }
 
-/* =========================================================
-   BOTÕES
-========================================================= */
-button {
-  width: 100%;
-  padding: 14px;
-  margin-top: 12px;
-  border-radius: 16px;
-  border: none;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-  position: relative;
-  transition: all .2s ease;
+th,td{
+border:1px solid #e5e7eb;
+padding:6px;
+text-align:center;
 }
 
-button:active {
-  transform: scale(0.98);
+#listaProdutos{
+background:#fff;
+border:1px solid #ddd;
+border-radius:8px;
+margin-top:5px;
+max-height:150px;
+overflow:auto;
 }
 
-/* PRIMÁRIO */
-.btn-primary {
-  background: linear-gradient(180deg, #2563eb, #1e40af);
-  color: #ffffff;
+.item{
+padding:10px;
+cursor:pointer;
+font-weight:600;
 }
 
-.btn-primary:hover {
-  filter: brightness(1.05);
+.item:hover{
+background:#f1f5f9;
 }
-
-/* MUTED */
-.btn-muted {
-  background: #e5e7eb;
-  color: #0f172a;
-}
-
-.btn-muted:hover {
-  background: #d1d5db;
-}
-
-/* LOADING OVERLAY */
-button.loading {
-  pointer-events: none;
-}
-
-button.loading::after {
-  content: "Enviando…";
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  font-weight: 800;
-}
-
-/* =========================================================
-   CAMERA / LEITOR
-========================================================= */
-#camera {
-  width: 100%;
-  height: 260px;
-  margin-top: 14px;
-  border-radius: 18px;
-  overflow: hidden;
-  background: #000;
-  position: relative;
-}
-
-#camera.hidden {
-  display: none;
-}
-
-#camera video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-
-#camera video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-#codigoLido {
-  margin-top: 8px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 800;
-  color: #2563eb;
-}
-
-/* =========================================================
-   BADGE / UNIDADE
-========================================================= */
-.badge {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 800;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-/* =========================================================
-   BUSCA POR NOME (LISTA)
-========================================================= */
-#listaProdutos {
-  margin-top: 6px;
-}
-
-.item {
-  background: #f1f5f9;
-  border-radius: 12px;
-  padding: 12px;
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all .15s ease;
-}
-
-.item:hover {
-  background: #e2e8f0;
-}
-
-/* =========================================================
-   HISTÓRICO
-========================================================= */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 16px;
-  font-size: 13px;
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-th, td {
-  border: 1px solid #e5e7eb;
-  padding: 8px;
-  text-align: center;
-}
-
-th {
-  background: #f1f5f9;
-  font-weight: 800;
-}
-
-tbody tr:nth-child(even) {
-  background: #f8fafc;
-}
-
-/* BOTÃO EXCLUIR */
-.btn-delete {
-  background: #fee2e2;
-  color: #991b1b;
-  border: none;
-  border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.btn-delete:hover {
-  background: #fecaca;
-}
-
-/* =========================================================
-   UTILIDADES
-========================================================= */
-.hidden {
-  display: none !important;
-}
-#camera {
-  min-height: 260px;
-}
-
 </style>
 </head>
 
 <body>
+
 <div class="container">
 
-<div class="topbar">
-  <h1>📋 Requisição</h1>
-<button class="btn-logout" id="btnLogout">Sair</button>
-</div>
+<h1>Requisição de produtos</h1>
 
-<!-- LOGIN -->
-<div id="loginArea">
-  <label>Usuário</label>
-  <input id="usuario">
-  <label>Senha</label>
-  <input id="senha" type="password">
-  <button class="btn-primary" id="btnLogin">Entrar</button>
-</div>
-
-<!-- APP -->
-<div id="appArea" class="hidden">
+<label>Solicitante</label>
+<select id="solicitante">
+<option>Selecione o solicitante</option>
+<option>João</option>
+<option>Maria</option>
+</select>
 
 <label>Setor</label>
 <select id="setor">
-  <option>Cozinha</option>
-  <option>Limpeza</option>
-  <option>Bar</option>
+<option>Cozinha</option>
+<option>Bar</option>
+<option>Limpeza</option>
 </select>
-
-<label></label>
-<input id="barcode" placeholder="Digite ou escaneie">
-<label>Modo de busca</label>
-<select id="modoBusca">
-  <option value="barcode">Código de Barras</option>
-  <option value="nome">Nome do produto</option>
-  <option value="id">ID do produto</option>
-</select>
-
-<div id="buscaNome" class="hidden">
-  <label>Buscar por nome</label>
-  <input id="buscaProdutoNome" placeholder="Digite o nome do produto">
-  <div id="listaProdutos"></div>
-</div>
-
-<div id="buscaId" class="hidden">
-  <label>Buscar por ID</label>
-  <input id="buscaProdutoId" type="number" inputmode="numeric" placeholder="Digite o ID">
-</div>
-
-<button class="btn-muted" id="btnManual">Buscar manual</button>
-<button class="btn-primary" id="btnOpenCamera">Abrir câmera</button>
-<button class="btn-muted hidden" id="btnCloseCamera">Fechar câmera</button>
-
-<div id="camera"></div>
-
-<div id="codigoLido"></div>
 
 <label>Produto</label>
-<input id="produto" readonly>
-
-<div id="unidadeBox"></div>
+<input id="produto" placeholder="Digite o produto">
+<div id="listaProdutos"></div>
 
 <label>Quantidade</label>
-<input type="number" id="quantidade" min="1">
+<input id="quantidade" placeholder="0,00">
+
+<label>Unidade de Medida</label>
+<div class="unidades">
+<button onclick="setUnidade('UN')" id="uUN">UN.</button>
+<button onclick="setUnidade('PC')" id="uPC">PC.</button>
+<button onclick="setUnidade('L')" id="uL">L.</button>
+<button onclick="setUnidade('KG')" id="uKG">KG.</button>
+<button onclick="setUnidade('CX')" id="uCX">CX.</button>
+</div>
 
 <label>Observações</label>
-<textarea id="observacoes"></textarea>
+<textarea id="obs" placeholder="Observações gerais"></textarea>
 
-<button class="btn-primary" id="btnEnviar">Enviar requisição</button>
+<button class="btn btn-primary" onclick="enviar()">ENVIAR ITEM</button>
+<button class="btn btn-danger" onclick="limpar()">LIMPAR HISTÓRICO</button>
 
-<h3 style="margin-top:20px">Histórico (7 dias)</h3>
+<h3>Itens enviados nesta sessão:</h3>
+
 <table>
 <thead>
 <tr>
-<th>Produto</th><th>Qtd</th><th>Status</th><th>Ação</th>
+<th>Produto</th>
+<th>Unidade</th>
+<th>Qtd</th>
+<th>Setor</th>
+<th>Hora</th>
+<th>Status</th>
 </tr>
 </thead>
-<tbody id="historico"></tbody>
+<tbody id="tabela"></tbody>
 </table>
 
 </div>
-
-<audio id="beep">
-<source src="data:audio/wav;base64,UklGRlIAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQwAAAAA">
-</audio>
-
-</div>
-<!-- 🔥 SUBSTITUI TODO SEU SCRIPT POR ESSE -->
 
 <script>
 const sb = supabase.createClient(
@@ -412,159 +198,135 @@ const sb = supabase.createClient(
  "sb_publishable_AUyBEIVCAMUoXwDKUmlqSw_v8EY8rVN"
 );
 
-let usuarioLogado = JSON.parse(localStorage.getItem("usuario"));
+let unidade = "UN";
+let produtosCache = [];
 
-let produtoSelecionado = null;
-
-/* ================= LOGIN ================= */
-btnLogin.onclick = async () => {
-  const { data } = await sb.from("usuarios")
-    .select("*")
-    .eq("usuario", usuario.value)
-    .eq("senha", senha.value)
-    .eq("ativo", true)
-    .single();
-
-  if (!data) return alert("Login inválido");
-
-  localStorage.setItem("usuario", JSON.stringify(data.usuario));
-  init();
-};
-
-/* ================= INIT ================= */
-async function init(){
-  loginArea.classList.add("hidden");
-  appArea.classList.remove("hidden");
-  btnLogout.classList.remove("hidden");
-
-  carregarHistorico();
+/* ===== UNIDADE ===== */
+function setUnidade(u){
+  unidade = u;
+  document.querySelectorAll(".unidades button").forEach(b=>b.classList.remove("active"));
+  document.getElementById("u"+u).classList.add("active");
 }
-if(usuarioLogado) init();
 
-/* ================= LOGOUT ================= */
-btnLogout.onclick = () => {
-  localStorage.removeItem("usuario");
-  location.reload();
+/* ===== MASCARA QUANTIDADE ===== */
+quantidade.oninput = () => {
+  let v = quantidade.value.replace(/\D/g,'');
+  v = (Number(v)/100).toFixed(2);
+  quantidade.value = v;
 };
 
-/* ================= BUSCA PRODUTO ================= */
-buscaProdutoNome.onkeyup = async () => {
+/* ===== BUSCA ===== */
+produto.onkeyup = async () => {
 
-  const q = buscaProdutoNome.value.trim().toUpperCase();
+  const q = produto.value.trim().toUpperCase();
 
   if(q.length < 2){
-    listaProdutos.innerHTML = "";
+    listaProdutos.innerHTML="";
     return;
   }
 
   const { data } = await sb
-    .from("produtos_para_requisicao")
-    .select("*")
-    .ilike("nome", `%${q}%`)
-    .limit(10);
+  .from("produtos_para_requisicao")
+  .select("*")
+  .ilike("nome", `%${q}%`)
+  .limit(10);
+
+  produtosCache = data || [];
 
   listaProdutos.innerHTML = "";
 
-  (data || []).forEach(p => {
-    listaProdutos.insertAdjacentHTML("beforeend", `
-      <div class="item" onclick="selecionarProduto(${p.id}, '${p.nome}', '${p.unidade || "UN"}')">
-        ${p.nome}
-      </div>
-    `);
+  produtosCache.forEach(p=>{
+    listaProdutos.innerHTML += `
+    <div class="item" onclick="selectProduto('${p.nome}')">
+      ${p.nome}
+    </div>`;
   });
 };
 
-/* ================= SELECIONAR ================= */
-function selecionarProduto(id, nome, unidade){
+/* ===== SELECT ===== */
+function selectProduto(nome){
   produto.value = nome;
-  produtoSelecionado = { id, nome, unidade };
-
-  unidadeBox.innerHTML = `<div class="badge">${unidade}</div>`;
   listaProdutos.innerHTML = "";
+
+  // 🔥 pergunta unidade
+  setTimeout(()=>{
+    const u = prompt("Qual unidade? (UN, KG, L, CX, PC)", unidade);
+    if(u) setUnidade(u.toUpperCase());
+  },100);
 }
 
-/* ================= ENVIAR ================= */
-btnEnviar.onclick = async () => {
+/* ===== ENVIAR ===== */
+async function enviar(){
 
   if(!produto.value || !quantidade.value){
-    return alert("Preencha produto e quantidade");
+    alert("Preencha produto e quantidade");
+    return;
   }
 
-  let produtoNome = produto.value.trim().toUpperCase();
+  const nome = produto.value.trim().toUpperCase();
 
-  let produtoId = produtoSelecionado?.id || null;
-  let unidade = produtoSelecionado?.unidade || "UN";
+  // 🔥 cria produto se não existir
+  const { data: existente } = await sb
+  .from("produtos_para_requisicao")
+  .select("*")
+  .eq("nome", nome)
+  .single();
 
-  /* 🔥 SE NÃO EXISTIR → CRIA */
-  if(!produtoId){
+  let produto_id;
 
+  if(!existente){
     const { data: novo } = await sb
-      .from("produtos_para_requisicao")
-      .insert({
-        nome: produtoNome,
-        unidade: unidade
-      })
-      .select()
-      .single();
+    .from("produtos_para_requisicao")
+    .insert({ nome })
+    .select()
+    .single();
 
-    produtoId = novo.id;
+    produto_id = novo.id;
+  }else{
+    produto_id = existente.id;
   }
 
-  /* 🔥 SALVA REQUISIÇÃO */
+  // 🔥 salva requisição
   await sb.from("requisicoes").insert({
-    usuario: usuarioLogado,
-    setor: setor.value,
-    produto: produtoNome,
-    produto_id: produtoId,
-    quantidade: Number(quantidade.value),
-    unidade: unidade,
-    observacoes: observacoes.value,
-    status: "PENDENTE"
+    produto:nome,
+    produto_id,
+    quantidade:Number(quantidade.value),
+    unidade,
+    setor:setor.value,
+    usuario:solicitante.value,
+    status:"ENVIADO"
   });
 
-  alert("✅ Requisição enviada!");
-
-  limpar();
-  carregarHistorico();
-};
-
-/* ================= LIMPAR ================= */
-function limpar(){
-  produto.value = "";
-  quantidade.value = "";
-  observacoes.value = "";
-  unidadeBox.innerHTML = "";
-  listaProdutos.innerHTML = "";
-  produtoSelecionado = null;
+  adicionarTabela(nome);
+  limparCampos();
 }
 
-/* ================= HISTÓRICO ================= */
-async function carregarHistorico(){
+/* ===== TABELA LOCAL ===== */
+function adicionarTabela(nome){
+  const hora = new Date().toLocaleTimeString();
 
-  historico.innerHTML = "";
+  tabela.innerHTML += `
+  <tr>
+    <td>${nome}</td>
+    <td>${unidade}</td>
+    <td>${quantidade.value}</td>
+    <td>${setor.value}</td>
+    <td>${hora}</td>
+    <td>Enviado</td>
+  </tr>`;
+}
 
-  const seteDias = new Date(Date.now() - 7*86400000).toISOString();
+/* ===== LIMPAR ===== */
+function limpar(){
+  tabela.innerHTML="";
+}
 
-  const { data } = await sb
-    .from("requisicoes")
-    .select("*")
-    .eq("usuario", usuarioLogado)
-    .gte("created_at", seteDias)
-    .order("created_at", { ascending:false });
-
-  (data || []).forEach(r => {
-
-    historico.insertAdjacentHTML("beforeend", `
-      <tr>
-        <td>${r.produto}</td>
-        <td>${r.quantidade}</td>
-        <td>${r.status}</td>
-        <td>-</td>
-      </tr>
-    `);
-
-  });
+function limparCampos(){
+  produto.value="";
+  quantidade.value="";
+  obs.value="";
 }
 </script>
+
 </body>
 </html>
